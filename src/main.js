@@ -132,9 +132,19 @@ async function initData() {
     const os = heightOverlay.getStatus();
     $('#heightOverlayName').textContent = os.enabled ? os.name : '未启用 · 可选增强';
     await landmarkModels.loadManifest();
-    await updateData(true);
+    const bootQuality = {
+      ...quality,
+      terrainRadius: 0,
+      buildingRadius: 0,
+      terrainSegments: Math.min(18, quality.terrainSegments),
+      minBuildingArea: Math.max(110, quality.minBuildingArea)
+    };
+    const bootGeo = targetGeo();
+    const bootDistance = distance();
+    await terrain.update(bootGeo.lon, bootGeo.lat, bootDistance, bootQuality);
+    await buildings.update(bootGeo.lon, bootGeo.lat, bootDistance, bootQuality);
     const initialBuildings = buildings.getStats();
-    if (distance() < 32000 && initialBuildings.rendered <= 0) throw new Error('Initial Foshan building view rendered zero buildings');
+    if (bootDistance < 32000 && initialBuildings.rendered <= 0) throw new Error('Initial Foshan building view rendered zero buildings');
     setStatus(`开放数据已连接 · Overture ${OVERTURE_RELEASE}`, 'ok');
     document.documentElement.dataset.appReady = 'true';
   } catch (e) {
@@ -144,6 +154,7 @@ async function initData() {
     document.documentElement.dataset.appReady = 'degraded';
   } finally {
     booting = false;
+    queueMicrotask(() => updateData(true));
   }
 }
 
