@@ -85,7 +85,7 @@ const overture = new OvertureBuildingsProvider();
 const buildings = new BuildingTileManager({ scene, provider: overture, materials, terrain, heightOverlay, originLon, originLat });
 const landmarkModels = new LandmarkModelLayer({ scene, originLon, originLat, terrain });
 
-let dataReady = false, updating = false, queued = false, lastUpdate = 0, lastDistance = Infinity;
+let dataReady = false, booting = true, updating = false, queued = false, lastUpdate = 0, lastDistance = Infinity;
 let lastTarget = new THREE.Vector3(Infinity, Infinity, Infinity), fly = null, outline = null;
 let fps = 0, frames = 0, fpsAt = performance.now(), lowSince = null, highSince = null, qualityAt = performance.now(), hashAt = 0, healthAt = 0;
 
@@ -133,13 +133,17 @@ async function initData() {
     $('#heightOverlayName').textContent = os.enabled ? os.name : '未启用 · 可选增强';
     await landmarkModels.loadManifest();
     await updateData(true);
+    const initialBuildings = buildings.getStats();
+    if (distance() < 32000 && initialBuildings.rendered <= 0) throw new Error('Initial Foshan building view rendered zero buildings');
     setStatus(`开放数据已连接 · Overture ${OVERTURE_RELEASE}`, 'ok');
     document.documentElement.dataset.appReady = 'true';
   } catch (e) {
-    console.error(e); await overlayPromise.catch(() => null);
+    console.error(e); document.documentElement.dataset.runtimeError = String(e?.message || e).slice(0, 180); await overlayPromise.catch(() => null);
     setStatus('Overture 建筑连接失败；地形与影像仍可浏览。', 'error');
     await updateData(true);
     document.documentElement.dataset.appReady = 'degraded';
+  } finally {
+    booting = false;
   }
 }
 
@@ -272,7 +276,7 @@ function telemetry(now) {
   if(now-healthAt>2500){healthAt=now;if(t.failed&&t.visible===0)setStatus('地形数据暂不可用，移动视角会继续重试。','warn');else if(overture.lastError&&!b.rendered&&distance()<32000)setStatus('建筑瓦片暂不可用；请检查网络后移动视角重试。','warn');}
 }
 function animate(now=performance.now()) {
-  requestAnimationFrame(animate); updateFly(); controls.enabled=!fly; controls.update(); updateSun(); updateData(false); telemetry(now);
+  requestAnimationFrame(animate); updateFly(); controls.enabled=!fly; controls.update(); updateSun(); if (!booting) updateData(false); telemetry(now);
   if(now-hashAt>900&&!fly){hashAt=now;history.replaceState(null,'',`${location.pathname}${location.search}#${viewHash()}`);} renderer.render(scene,camera);
 }
 

@@ -26,8 +26,6 @@ export class BuildingTileManager {
 
   chooseZoom(altitude, quality) {
     if (altitude > 32000) return null;
-    // Overture's building footprint / building_part geometry is complete at z14.
-    // Lower zooms may be centroid/simplified representations, which are not valid 3D footprints.
     let z = Math.min(14, quality.maxBuildingZoom);
     if (this.provider.header?.maxZoom != null) z = Math.min(z, this.provider.header.maxZoom);
     if (this.provider.header?.minZoom != null) z = Math.max(z, this.provider.header.minZoom);
@@ -45,10 +43,10 @@ export class BuildingTileManager {
       return;
     }
     const center = lonLatToTile(lon, lat, z);
-    const radius = quality.buildingRadius;
+    const detail = this.detailForAltitude(altitude);
+    const radius = detail === 'far' ? 0 : quality.buildingRadius;
     const desired = new Set();
     const requests = [];
-    const detail = this.detailForAltitude(altitude);
     const effectiveMinArea = quality.minBuildingArea * (z <= 12 ? 8 : detail === 'far' ? 4 : detail === 'medium' ? 1.8 : 1);
 
     for (let dx = -radius; dx <= radius; dx++) {
