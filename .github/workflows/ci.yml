@@ -4,7 +4,7 @@ on:
     branches: [main]
   pull_request:
 permissions:
-  contents: write
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-24.04
@@ -15,33 +15,16 @@ jobs:
         with:
           node-version: '22'
       - name: Install locked runtime/build dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci --ignore-scripts --no-audit --no-fund
-          else
-            npm install --ignore-scripts --no-audit --no-fund
-          fi
-      - name: Bootstrap lockfile once
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore: lock browser dependencies"
-          git push
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Static and algorithm checks
         run: npm run check
       - name: Production bundle
         run: npm run build
-      - name: Verify live Foshan open-data endpoints
+      - name: Verify live Foshan open-data endpoints and geometry
         run: npm run network-smoke
       - name: Start production preview
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/foshan-server.log 2>&1 &
-          echo $! > /tmp/foshan-server.pid
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
             sleep 0.5
@@ -62,6 +45,7 @@ jobs:
             --dump-dom http://127.0.0.1:4173/ > /tmp/foshan-dom.html
           grep -q 'data-shell-ready="true"' /tmp/foshan-dom.html
           grep -q 'data-app-ready="true"' /tmp/foshan-dom.html || {
+            grep -o 'data-runtime-error="[^"]*"' /tmp/foshan-dom.html || true
             grep -o '<div id="status"[^>]*>[^<]*' /tmp/foshan-dom.html || true
             exit 1
           }
@@ -69,6 +53,7 @@ jobs:
           test -n "$BUILDING_COUNT"
           test "$BUILDING_COUNT" -gt 0
           test -s /tmp/foshan-v1.png
+          echo "browser: appReady=true buildings=$BUILDING_COUNT PASS"
       - name: Upload production bundle
         if: success()
         uses: actions/upload-artifact@v4

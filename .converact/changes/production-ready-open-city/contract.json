@@ -3,10 +3,10 @@
   "constraints": [
     "Three.js remains the rendering engine.",
     "Default use requires no paid API key.",
-    "Real geographic data and visual estimation must remain distinguishable in UI and documentation.",
-    "No unlicensed landmark meshes may be bundled.",
-    "No Overpass/OSM extrusion fallback may replace Overture as the default high-fidelity building path.",
-    "Production startup must not depend on runtime CDN import maps; browser dependencies are pinned and bundled locally."
+    "Real geographic data and visual estimation remain distinguishable in UI and documentation.",
+    "No unlicensed landmark meshes are bundled.",
+    "No Overpass/OSM extrusion fallback replaces Overture as the default building path.",
+    "Production startup uses lockfile-pinned local bundles rather than runtime CDN import maps."
   ],
   "nonGoals": [
     "Claiming generated facade details are surveyed real-world facade details.",
@@ -33,10 +33,10 @@
     {
       "id": "REQ-003",
       "type": "behavior",
-      "statement": "Near buildings use categorized PBR facades, roof attributes and safe deterministic visual detail without Math.random.",
+      "statement": "Buildings use complete Overture z14 footprints; near buildings add categorized PBR facades, roof attributes and deterministic visual detail without Math.random.",
       "priority": "must",
-      "scope": ["src/render/**"],
-      "checks": ["CHK-001"]
+      "scope": ["src/providers/buildingTiles.js", "src/render/**"],
+      "checks": ["CHK-001", "CHK-002"]
     },
     {
       "id": "REQ-004",
@@ -57,15 +57,23 @@
     {
       "id": "REQ-006",
       "type": "reliability",
-      "statement": "Production builds bundle pinned Three.js and tile-decoding dependencies locally and browser CI executes the bundled app.",
+      "statement": "Production builds use package-lock.json with npm ci and bundle pinned Three.js and tile-decoding dependencies locally.",
       "priority": "must",
-      "scope": ["package.json", "vite.config.js", "index.html", ".github/workflows/ci.yml"],
+      "scope": ["package.json", "package-lock.json", "vite.config.js", ".github/workflows/ci.yml"],
       "checks": ["CHK-001", "CHK-003"]
+    },
+    {
+      "id": "REQ-007",
+      "type": "behavior",
+      "statement": "First-view readiness is progressive and is reported only after at least one real Foshan Overture building has been generated, after which the full view expands in the background.",
+      "priority": "must",
+      "scope": ["src/main.js", "src/providers/buildingTiles.js"],
+      "checks": ["CHK-003"]
     }
   ],
   "checks": [
-    {"id": "CHK-001", "kind": "command", "description": "Static, geo, height, roof, DOM, policy and bundling-contract tests pass.", "command": "npm run check"},
-    {"id": "CHK-002", "kind": "command", "description": "Pinned public data endpoints are reachable.", "command": "npm run network-smoke"},
-    {"id": "CHK-003", "kind": "manual", "description": "CI browser smoke loads the real page to appReady=true and produces a screenshot artifact."}
+    {"id": "CHK-001", "kind": "command", "description": "Static, geo, height, roof, DOM, policy, lockfile and bundling-contract tests pass.", "command": "npm run check"},
+    {"id": "CHK-002", "kind": "command", "description": "Pinned public data endpoints and real Foshan Overture decoding/Three.js geometry path pass.", "command": "npm run network-smoke"},
+    {"id": "CHK-003", "kind": "manual", "description": "CI production-browser smoke reaches appReady=true with buildingStats > 0 and produces screenshot evidence."}
   ]
 }
