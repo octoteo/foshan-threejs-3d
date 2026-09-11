@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#07111c" />
+  <meta name="description" content="基于 Three.js 与 OGC 3D Tiles 的佛山高保真三维城市浏览器。" />
+  <title>佛山全景 3D · Photorealistic Three.js</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="./src/styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/",
+        "3d-tiles-renderer": "https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.5.2/build/index.js",
+        "3d-tiles-renderer/plugins": "https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.5.2/build/index.plugins.js",
+        "3d-tiles-renderer/core/plugins": "https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.5.2/build/index.core-plugins.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main id="app">
+    <canvas id="scene" aria-label="佛山三维地图"></canvas>
+    <div class="sky-haze" aria-hidden="true"></div>
+
+    <header class="topbar panel">
+      <div class="brand">
+        <div class="brand-orb" aria-hidden="true"></div>
+        <div>
+          <span class="eyebrow">FOSHAN / PHOTOREALISTIC DIGITAL TWIN</span>
+          <h1>佛山全景 3D</h1>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="source-badge" class="badge badge-warn">未连接真实 3D 数据</span>
+        <button id="btn-source" class="ghost-button" type="button">数据源</button>
+        <button id="btn-fullscreen" class="ghost-button icon-button" type="button" aria-label="全屏">⛶</button>
+      </div>
+    </header>
+
+    <aside class="sidebar panel">
+      <div class="sidebar-head">
+        <span class="eyebrow">REAL-WORLD NAVIGATION</span>
+        <h2>佛山地标</h2>
+        <p>直接飞行到真实经纬度。高保真程度由接入的摄影测量 / 3D Tiles 数据决定，不再生成假建筑替代真实城市。</p>
+      </div>
+      <div id="landmark-list" class="landmark-list"></div>
+      <div class="sidebar-foot">
+        <button id="btn-overview" class="primary-button" type="button">返回佛山总览</button>
+        <button id="btn-tour" class="secondary-button" type="button">自动巡航</button>
+      </div>
+    </aside>
+
+    <section class="telemetry panel" aria-label="渲染状态">
+      <div class="telemetry-title">
+        <span class="live-dot"></span>
+        <span>RENDER TELEMETRY</span>
+      </div>
+      <div class="metric-grid">
+        <div><span>位置</span><strong id="metric-location">佛山市</strong></div>
+        <div><span>海拔</span><strong id="metric-altitude">--</strong></div>
+        <div><span>可见瓦片</span><strong id="metric-visible">0</strong></div>
+        <div><span>缓存</span><strong id="metric-cache">0 MB</strong></div>
+        <div><span>FPS</span><strong id="metric-fps">--</strong></div>
+        <div><span>LOD 误差</span><strong id="metric-lod">8 px</strong></div>
+      </div>
+      <div class="quality-row">
+        <span>画质</span>
+        <div class="segmented" role="group" aria-label="画质选择">
+          <button data-quality="performance" type="button">性能</button>
+          <button data-quality="balanced" type="button">均衡</button>
+          <button data-quality="ultra" class="active" type="button">超清</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="loading" class="loading panel hidden" role="status">
+      <span class="spinner"></span>
+      <div>
+        <strong id="loading-title">正在连接真实世界数据</strong>
+        <small id="loading-subtitle">OGC 3D Tiles streaming</small>
+      </div>
+    </div>
+
+    <div id="toast" class="toast panel hidden"></div>
+
+    <footer class="attribution-bar">
+      <div id="google-brand" class="google-brand hidden" aria-label="Google Maps">Google Maps</div>
+      <div id="dynamic-attribution" class="dynamic-attribution">3D 数据源未连接</div>
+      <div class="engine-attribution">Three.js · 3D Tiles Renderer</div>
+    </footer>
+
+    <div id="source-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="source-title">
+      <section class="source-card panel-solid">
+        <button id="btn-close-source" class="modal-close" type="button" aria-label="关闭">×</button>
+        <span class="eyebrow">PHOTOREALISTIC SOURCE</span>
+        <h2 id="source-title">连接真实 3D 城市数据</h2>
+        <p class="modal-intro">Google Earth 级视觉效果必须来自真实摄影测量网格或同等级 3D Tiles。这里不使用 OSM 拉伸建筑冒充高保真结果。</p>
+
+        <div class="provider-tabs" role="tablist" aria-label="数据源类型">
+          <button class="provider-tab active" data-provider="google" type="button">Google Photorealistic</button>
+          <button class="provider-tab" data-provider="custom" type="button">自有 3D Tiles</button>
+        </div>
+
+        <form id="source-form">
+          <div id="google-fields" class="provider-fields">
+            <label for="google-key">Google Maps Platform API Key</label>
+            <input id="google-key" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…" />
+            <small>需要启用 Map Tiles API 与结算。密钥仅保存在本浏览器 sessionStorage，不写入仓库。</small>
+          </div>
+
+          <div id="custom-fields" class="provider-fields hidden">
+            <label for="custom-url">OGC 3D Tiles 根地址</label>
+            <input id="custom-url" type="url" autocomplete="off" spellcheck="false" placeholder="https://example.com/foshan/tileset.json" />
+            <small>用于佛山本地倾斜摄影、实景三维、CityMesh 转 3D Tiles 等授权数据。支持公网 URL 或带签名参数的 URL。</small>
+          </div>
+
+          <div class="source-actions">
+            <button id="btn-clear-source" class="secondary-button" type="button">清除凭据</button>
+            <button class="primary-button" type="submit">连接并进入佛山</button>
+          </div>
+        </form>
+
+        <div class="acceptance-note">
+          <strong>验收基线</strong>
+          <span>真实纹理网格 · 真实地形 · 连续 LOD · 可自由俯仰旋转 · 地标实景可辨识 · 不以程序化建筑替代缺失数据。</span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
