@@ -1,6 +1,6 @@
 import { PMTiles } from 'pmtiles';
 import { VectorTile } from '@mapbox/vector-tile';
-import Protobuf from 'pbf';
+import { PbfReader } from 'pbf';
 import { OVERTURE_BUILDINGS_URL, RUNTIME } from '../config.js';
 import { retry } from './requestQueue.js';
 
@@ -30,7 +30,7 @@ export class OvertureBuildingsProvider {
         baseMs: RUNTIME.retryBaseMs
       });
       if (!response?.data) return [];
-      const tile = new VectorTile(new Protobuf(response.data));
+      const tile = new VectorTile(new PbfReader(response.data));
       const features = [];
       const partsLayer = tile.layers.building_part;
       const buildingLayer = tile.layers.building;
