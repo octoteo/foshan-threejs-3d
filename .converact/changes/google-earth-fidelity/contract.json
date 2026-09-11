@@ -1,0 +1,19 @@
+{
+  "id": "google-earth-fidelity",
+  "intent": "Replace procedural Foshan city geometry with a real-world OGC 3D Tiles pipeline capable of Google Earth-class photorealistic rendering.",
+  "risk": "L2",
+  "requirements": [
+    "MUST render real photogrammetric or equivalent textured 3D mesh for final visual acceptance",
+    "MUST NOT use procedural OSM building extrusion as a photorealistic fallback",
+    "MUST support Google Photorealistic 3D Tiles and a generic custom 3D Tiles source",
+    "MUST keep runtime credentials out of repository files",
+    "MUST display dynamic provider attribution and Google Maps brand attribution when Google content is used",
+    "MUST stream LOD tiles and expose a high-quality 8 px screen-space error preset"
+  ],
+  "acceptance": [
+    "npm run check",
+    "Manual: connect a licensed source with Foshan photogrammetric coverage and inspect Zumiao, Qiandeng Lake, Century Lotus, Xiqiao Mountain and Qinghui Garden in ultra mode",
+    "Manual: verify roof, facade, terrain and vegetation details originate from the real textured mesh rather than generated geometry"
+  ],
+  "status": "implemented-awaiting-external-data-visual-evidence"
+}
