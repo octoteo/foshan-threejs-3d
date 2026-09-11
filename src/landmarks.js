@@ -1,0 +1,67 @@
+export const FOSHAN = {
+  id: 'foshan-overview',
+  name: '佛山市',
+  subtitle: '城市总览',
+  lat: 23.0210,
+  lon: 113.1210,
+  camera: { lat: 22.905, lon: 112.985, height: 34000 },
+};
+
+export const LANDMARKS = [
+  {
+    id: 'zumiao',
+    name: '佛山祖庙',
+    subtitle: '禅城 · 岭南古建筑',
+    lat: 23.03162,
+    lon: 113.10783,
+    camera: { lat: 23.0222, lon: 113.0982, height: 1050 },
+  },
+  {
+    id: 'lingnan-tiandi',
+    name: '岭南天地',
+    subtitle: '禅城 · 历史街区',
+    lat: 23.03239,
+    lon: 113.11092,
+    camera: { lat: 23.0240, lon: 113.1014, height: 980 },
+  },
+  {
+    id: 'nanfeng-kiln',
+    name: '南风古灶',
+    subtitle: '禅城 · 石湾陶文化',
+    lat: 23.00753,
+    lon: 113.07383,
+    camera: { lat: 22.9984, lon: 113.0640, height: 1050 },
+  },
+  {
+    id: 'century-lotus',
+    name: '世纪莲体育中心',
+    subtitle: '佛山新城 · 城市地标',
+    lat: 22.96981,
+    lon: 113.11431,
+    camera: { lat: 22.9585, lon: 113.1020, height: 1550 },
+  },
+  {
+    id: 'qiandenghu',
+    name: '千灯湖公园',
+    subtitle: '南海 · 桂城中轴',
+    lat: 23.05396,
+    lon: 113.14171,
+    camera: { lat: 23.0408, lon: 113.1270, height: 1750 },
+  },
+  {
+    id: 'xiqiao',
+    name: '西樵山',
+    subtitle: '南海 · 山水地标',
+    lat: 22.95421,
+    lon: 112.96993,
+    camera: { lat: 22.9280, lon: 112.9410, height: 3900 },
+  },
+  {
+    id: 'qinghui',
+    name: '清晖园',
+    subtitle: '顺德 · 岭南园林',
+    lat: 22.83842,
+    lon: 113.24978,
+    camera: { lat: 22.8295, lon: 113.2400, height: 1050 },
+  },
+];
