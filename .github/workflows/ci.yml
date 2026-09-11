@@ -14,3 +14,5 @@ jobs:
         with:
           node-version: '22'
       - run: npm run check
+      - name: Verify live open-data endpoints over Foshan
+        run: npm run network-smoke

@@ -7,6 +7,7 @@
   "scripts": {
     "serve": "node scripts/serve.mjs",
     "test": "node tests/geo.mjs && node tests/heights.mjs && node tests/acceptance.mjs",
-    "check": "node --check src/main.js && node --check src/providers/overtureBuildings.js && node --check src/providers/terrain.js && node --check src/render/buildingTile.js && npm test"
+    "check": "node --check src/main.js && node --check src/providers/overtureBuildings.js && node --check src/providers/terrain.js && node --check src/render/buildingTile.js && npm test",
+    "network-smoke": "node tests/network-smoke.mjs"
   }
 }

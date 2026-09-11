@@ -17,32 +17,54 @@
       "type": "invariant",
       "statement": "The default building source is the official Overture Buildings PMTiles release and is loaded by viewport.",
       "priority": "must",
-      "scope": ["src/providers/**", "src/config.js"],
-      "checks": ["CHK-001"]
+      "scope": [
+        "src/providers/**",
+        "src/config.js"
+      ],
+      "checks": [
+        "CHK-001",
+        "CHK-002"
+      ]
     },
     {
       "id": "REQ-002",
       "type": "invariant",
       "statement": "Building height uses Overture height or floor count before deterministic visual estimation, and the UI reports data-backed coverage.",
       "priority": "must",
-      "scope": ["src/buildingHeights.js", "src/main.js"],
-      "checks": ["CHK-001"]
+      "scope": [
+        "src/buildingHeights.js",
+        "src/main.js"
+      ],
+      "checks": [
+        "CHK-001"
+      ]
     },
     {
       "id": "REQ-003",
       "type": "behavior",
       "statement": "The default no-key mode renders terrain elevation and satellite imagery and dynamically changes tile LOD as the camera moves.",
       "priority": "must",
-      "scope": ["src/providers/terrain.js", "src/main.js"],
-      "checks": ["CHK-001"]
+      "scope": [
+        "src/providers/terrain.js",
+        "src/main.js"
+      ],
+      "checks": [
+        "CHK-001",
+        "CHK-002"
+      ]
     },
     {
       "id": "REQ-004",
       "type": "invariant",
       "statement": "The project contains no random-height fallback or fake landmark model presented as real.",
       "priority": "must",
-      "scope": ["src/**", "README.md"],
-      "checks": ["CHK-001"]
+      "scope": [
+        "src/**",
+        "README.md"
+      ],
+      "checks": [
+        "CHK-001"
+      ]
     }
   ],
   "checks": [
@@ -51,6 +73,12 @@
       "kind": "command",
       "description": "Static syntax, geometry, height-resolution, and policy acceptance tests pass.",
       "command": "npm run check"
+    },
+    {
+      "id": "CHK-002",
+      "kind": "command",
+      "description": "Public Overture, Terrarium, and EOX endpoints respond for the Foshan viewport.",
+      "command": "npm run network-smoke"
     }
   ]
 }
