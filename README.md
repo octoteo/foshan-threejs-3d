@@ -1,90 +1,81 @@
-# 佛山全景 3D / Foshan Photorealistic Three.js
+# 佛山真实 3D · Open Photorealistic Hybrid
 
-面向“接近 Google Earth 3D 的真实效果”重新设计的佛山三维城市浏览器。渲染核心仍为 **Three.js**，城市数据改为 **OGC 3D Tiles 实景三维流式加载**，不再把 OSM 拉伸建筑或程序化立面作为高保真结果。
+用 **Three.js** 构建的佛山开放数据高保真三维城市浏览器。默认不依赖 Google Photorealistic 3D Tiles，也不要求用户先购买倾斜摄影数据。
 
-## 为什么重构
+核心思路不是“用 OSM 拉伸一堆灰色方块”，而是把免费开放资源组合成一条可运行的数据管线：
 
-Google 官方对 Photorealistic 3D Tiles 的定义是：高分辨率影像纹理覆盖的真实 3D mesh。要达到这一视觉等级，数据本身必须来自摄影测量、倾斜摄影、实景三维或同等级城市网格；仅凭建筑 footprint、高度和通用纹理无法满足验收。
-
-因此 v2 的原则是：**宁可明确提示“缺少实景数据”，也不生成假建筑冒充真实佛山。**
-
-## 已实现
-
-- Three.js + `3d-tiles-renderer` 0.5.2 直接渲染 OGC 3D Tiles。
-- Google Maps Platform Photorealistic 3D Tiles 适配器。
-- 自有/第三方 3D Tiles 根 URL 适配器，适合接入佛山授权倾斜摄影、实景三维或城市 Mesh。
-- WGS84 全球坐标与佛山真实经纬度地标导航。
-- 佛山祖庙、岭南天地、南风古灶、世纪莲、千灯湖、西樵山、清晖园一键飞行。
-- 连续 LOD、瓦片卸载、Tile Compression、Fade、Draco/glTF 扩展。
-- 三档画质：性能 24 px、均衡 14 px、超清 8 px。
-- 显存/缓存、可见瓦片、FPS、海拔实时遥测。
-- Google 模式动态显示每个可见瓦片返回的数据 attribution，并保留 Google Maps 品牌区。
-- API Key 只保存在 `sessionStorage`，刷新标签页会话可继续使用，关闭会话后消失；不会提交到 GitHub。
-- 不提供 Google 内容预抓取、离线缓存或数据提取功能。
+- **建筑**：Overture Maps 官方全球 `buildings.pmtiles`，浏览器按当前视野 HTTP Range 读取佛山真实建筑 footprint。
+- **高度**：优先 Overture `height`，其次 `num_floors`；缺失时使用确定性的视觉估算，并在 UI 显示真实字段覆盖率。
+- **建筑属性**：利用 `subtype` / `class` / `facade_color` 等字段生成住宅、商业、工业、公共建筑等不同 PBR 立面。
+- **地形**：Mapzen Terrain Tiles / Terrarium，构建真实高程网格。
+- **影像**：默认 EOX Sentinel-2 2016（CC BY 4.0）；可切换 EOX 2024（非商业）或天地图影像（需要开发 Key）。
+- **地标**：祖庙、岭南天地、南风古灶、世纪莲、千灯湖、西樵山、清晖园使用真实 WGS84 坐标飞行；若后续有授权 GLB，可通过地标模型 manifest 叠加。
 
 ## 运行
 
-无需 npm 安装依赖；依赖由浏览器从 CDN 以 ES Modules 加载。
-
-### Windows
-
-双击 `run.bat`，打开：
-
-```text
-http://localhost:5173
-```
-
-### macOS / Linux
-
-```bash
-./run.sh
-```
-
-或者：
+无需安装第三方 npm 依赖；Three.js、PMTiles 和 MVT 解码器通过浏览器 ES Modules 加载。
 
 ```bash
 npm run serve
 ```
 
-## 数据源 1：Google Photorealistic 3D Tiles
+浏览器打开：
 
-1. 在 Google Cloud 创建项目并启用 **Map Tiles API**。
-2. 开启 Billing。
-3. 创建 API Key，并建议使用 HTTP referrer 与 API restrictions 限制使用范围。
-4. 页面点击“数据源”，选择 **Google Photorealistic**，输入 Key。
-5. 进入佛山并切换“超清”画质进行实际视觉验收。
+```text
+http://127.0.0.1:5173
+```
 
-> Google 的 Photorealistic 3D **surface data 并非全球所有城市都有覆盖**。如果佛山目标区域没有真实 surface mesh，则即使 API 正常也不能判定视觉验收通过。
+Windows 也可直接双击 `run.bat`。
 
-## 数据源 2：佛山自有实景三维 / 倾斜摄影
+## 为什么这条路线可行
 
-这是对佛山项目更可控的生产路径。把经授权的数据整理/转换为 OGC 3D Tiles，并提供可访问的根 `tileset.json` URL，然后在“数据源 → 自有 3D Tiles”中输入 URL。
+Overture 每月发布全球 Buildings PMTiles，官方提供可直接通过 HTTP 访问的 PMTiles URL，因此应用只读取佛山视野范围内的矢量瓦片，而不是下载全球几十 GB 数据。Overture Buildings schema 包含 `height`、`num_floors`、`min_height`、`facade_color`、`facade_material`、`roof_shape` 等三维可视化字段。
 
-推荐源数据：
+这意味着没有佛山摄影测量 mesh 时，我们仍然可以做到：
 
-- 无人机倾斜摄影（OSGB / OBJ / ContextCapture / Smart3D 输出）转换到 3D Tiles；
-- 城市级实景三维 mesh；
-- 已完成纹理烘焙的 CityMesh / GLB，经 3D Tiles 切片；
-- 政务/测绘已有的授权三维城市成果。
+**真实建筑位置 + 真实 footprint + 可用时真实高度 + 真实地形 + 卫星影像 + 分类型高质量立面。**
 
-## 验收
+这与“Google Earth 摄影测量 mesh”仍不是同一数据等级，因此项目不会把程序化墙面宣称为现实中真实的每扇窗户。完整边界见 [`ACCEPTANCE.md`](./ACCEPTANCE.md)。
 
-完整验收合同见 [`ACCEPTANCE.md`](./ACCEPTANCE.md)。核心硬门槛：
+## 影像许可
 
-**没有佛山真实摄影测量/实景三维数据，就不能以“Google Earth 3D 级真实效果”验收通过。**
+默认 `EOX Sentinel-2 2016` 使用 CC BY 4.0。`EOX 2024` 为 CC BY-NC-SA 4.0，仅适用于符合其非商业许可的场景。正式商业项目建议切换为已获授权的天地图影像、自有正射影像或其他商业卫星底图。
 
-静态工程检查：
+## 可选地标模型
+
+项目不会生成“假地标模型”冒充真实建筑。若有经授权的 GLB/GLTF，在 `assets/landmarks/manifest.json` 中配置：
+
+```json
+{
+  "models": [
+    {
+      "id": "zumiao",
+      "url": "./assets/landmarks/zumiao.glb",
+      "lon": 113.1122,
+      "lat": 23.0315,
+      "rotationDeg": 0,
+      "scale": 1
+    }
+  ]
+}
+```
+
+## 验证
 
 ```bash
 npm run check
 ```
 
-## 技术版本
+检查内容包括坐标换算、Web Mercator 瓦片定位、高度优先级、确定性高度估算，以及禁止回退到 Overpass / 随机建筑。
 
-- Three.js r185
-- 3d-tiles-renderer 0.5.2
-- Google Maps Platform Map Tiles API / Photorealistic 3D Tiles
+## 当前锁定数据版本
 
-## 数据与合规
+- Overture Maps: `2026-08-19.0`
+- Three.js: `0.185.0`
+- PMTiles JS: `4.5.0`
+- @mapbox/vector-tile: `3.0.0`
+- pbf: `5.1.2`
 
-Google Maps Platform 内容受 Google Maps Platform Terms 与 Map Tiles API Policies 约束。应用运行时只做在线可视化，并显示数据 attribution。自有 3D Tiles 的授权、版权与 attribution 由数据持有人负责。
+## Attribution
+
+Buildings 数据按 Overture Buildings 主题许可与各源 attribution 要求显示，包括 `© OpenStreetMap contributors, Overture Maps Foundation`。影像和地形 attribution 固定显示在视图右下角。

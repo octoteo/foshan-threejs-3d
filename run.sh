@@ -1,2 +1,3 @@
 #!/usr/bin/env sh
-python3 -m http.server 5173
+cd "$(dirname "$0")"
+node scripts/serve.mjs
