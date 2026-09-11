@@ -1,7 +1,8 @@
 import { PMTiles } from 'pmtiles';
 import { VectorTile } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
-import { lonLatToTile } from '../src/geo.js';
+import { lonLatToTile, polygonAreaMeters } from '../src/geo.js';
+import { OvertureBuildingsProvider } from '../src/providers/overtureBuildings.js';
 
 const BUILDINGS_URL = 'https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/buildings.pmtiles';
 const urls = [
@@ -21,24 +22,52 @@ for (const [name, url, options] of urls) {
   } finally { clearTimeout(timer); }
 }
 
-const archive = new PMTiles(BUILDINGS_URL);
 const coord = lonLatToTile(113.1214, 23.0218, 14);
+const archive = new PMTiles(BUILDINGS_URL);
 const response = await archive.getZxy(14, coord.x, coord.y);
 if (!response?.data) throw new Error(`Overture z14 Foshan tile ${coord.x}/${coord.y} is empty`);
 const vectorTile = new VectorTile(new PbfReader(response.data));
 const layerNames = Object.keys(vectorTile.layers);
 console.log(`overture-decode: layers=${layerNames.join(',')}`);
-let featureCount = 0;
+let rawFeatureCount = 0;
 let polygonCount = 0;
+const rawLayer = vectorTile.layers.building;
+if (rawLayer?.length) {
+  const sample = rawLayer.feature(0).properties || {};
+  console.log(`overture-decode: sample is_underground=${JSON.stringify(sample.is_underground)} (${typeof sample.is_underground}), has_parts=${JSON.stringify(sample.has_parts)} (${typeof sample.has_parts})`);
+}
 for (const layerName of ['building', 'building_part']) {
   const layer = vectorTile.layers[layerName];
   if (!layer) continue;
-  featureCount += layer.length;
+  rawFeatureCount += layer.length;
   for (let i = 0; i < layer.length; i++) {
     const geo = layer.feature(i).toGeoJSON(coord.x, coord.y, 14);
     if (geo.geometry?.type === 'Polygon' || geo.geometry?.type === 'MultiPolygon') polygonCount++;
   }
 }
-console.log(`overture-decode: Foshan z14 ${coord.x}/${coord.y} features=${featureCount} polygons=${polygonCount}`);
-if (featureCount <= 0 || polygonCount <= 0) throw new Error('Overture z14 Foshan tile did not decode building polygons');
-console.log('network: Overture Foshan z14 polygon decode PASS');
+console.log(`overture-decode: Foshan z14 ${coord.x}/${coord.y} raw=${rawFeatureCount} polygons=${polygonCount}`);
+if (rawFeatureCount <= 0 || polygonCount <= 0) throw new Error('Overture z14 Foshan tile did not decode building polygons');
+
+const provider = new OvertureBuildingsProvider(BUILDINGS_URL);
+await provider.init();
+const features = await provider.getFeatures(14, coord.x, coord.y);
+console.log(`overture-provider: emitted=${features.length}`);
+if (!features.length) throw new Error('OvertureBuildingsProvider filtered every Foshan building');
+let polygonSets = 0;
+let eligible55 = 0;
+let eligible220 = 0;
+let maxArea = 0;
+for (const feature of features) {
+  const sets = feature.geometry?.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry?.type === 'MultiPolygon' ? feature.geometry.coordinates : [];
+  for (const polygon of sets) {
+    const area = polygonAreaMeters(polygon?.[0], 113.1214, 23.0218);
+    if (!Number.isFinite(area)) continue;
+    polygonSets++;
+    maxArea = Math.max(maxArea, area);
+    if (area >= 55) eligible55++;
+    if (area >= 220) eligible220++;
+  }
+}
+console.log(`overture-geometry: polygonSets=${polygonSets} >=55m2=${eligible55} >=220m2=${eligible220} maxArea=${maxArea.toFixed(1)}m2`);
+if (eligible220 <= 0) throw new Error('Foshan tile has no building footprints above far-LOD area threshold');
+console.log('network: Overture Foshan provider + footprint area PASS');
