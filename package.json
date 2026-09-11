@@ -1,0 +1,11 @@
+{
+  "name": "foshan-threejs-3d",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Photorealistic Foshan 3D city viewer powered by Three.js and OGC 3D Tiles.",
+  "scripts": {
+    "check": "node --check src/main.js && node --check src/landmarks.js && node tests/acceptance.mjs",
+    "serve": "python3 -m http.server 5173"
+  }
+}
