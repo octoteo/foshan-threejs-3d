@@ -3,6 +3,8 @@ import { VectorTile } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
 import { lonLatToTile, polygonAreaMeters } from '../src/geo.js';
 import { OvertureBuildingsProvider } from '../src/providers/overtureBuildings.js';
+import { BuildingMaterialLibrary } from '../src/render/materials.js';
+import { buildBuildingTile, disposeBuildingTile } from '../src/render/buildingTile.js';
 
 const BUILDINGS_URL = 'https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/buildings.pmtiles';
 const urls = [
@@ -70,4 +72,21 @@ for (const feature of features) {
 }
 console.log(`overture-geometry: polygonSets=${polygonSets} >=55m2=${eligible55} >=220m2=${eligible220} maxArea=${maxArea.toFixed(1)}m2`);
 if (eligible220 <= 0) throw new Error('Foshan tile has no building footprints above far-LOD area threshold');
-console.log('network: Overture Foshan provider + footprint area PASS');
+
+const materials = new BuildingMaterialLibrary(null);
+const group = buildBuildingTile({
+  features,
+  originLon: 113.1214,
+  originLat: 23.0218,
+  minArea: 220,
+  materials,
+  terrain: { sampleHeight: () => 0 },
+  overlayResolver: null,
+  detail: 'far'
+});
+const renderStats = group.userData.stats;
+console.log(`overture-render: rendered=${renderStats.rendered} childMeshes=${group.children.length}`);
+if (renderStats.rendered <= 0 || group.children.length <= 0) throw new Error('buildBuildingTile failed to create Foshan Three.js meshes');
+disposeBuildingTile(group);
+materials.dispose();
+console.log('network: Overture Foshan decode + provider + Three.js geometry PASS');
