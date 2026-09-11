@@ -1,39 +1,54 @@
-import { lonLatToTile, tileKey } from '../geo.js';
+import { lonLatToTile, pointInRing, tileKey } from '../geo.js';
 import { buildBuildingTile, disposeBuildingTile } from '../render/buildingTile.js';
+import { RequestQueue } from './requestQueue.js';
+import { RUNTIME } from '../config.js';
 
 export class BuildingTileManager {
-  constructor({ scene, provider, materials, terrain, originLon, originLat }) {
+  constructor({ scene, provider, materials, terrain, heightOverlay, originLon, originLat }) {
     this.scene = scene;
     this.provider = provider;
     this.materials = materials;
     this.terrain = terrain;
+    this.heightOverlay = heightOverlay;
     this.originLon = originLon;
     this.originLat = originLat;
     this.tiles = new Map();
     this.desired = new Set();
     this.generation = 0;
-    this.lastStats = { total: 0, rendered: 0, explicitHeight: 0, floorsHeight: 0, estimatedHeight: 0 };
+    this.queue = new RequestQueue(RUNTIME.buildingConcurrency);
+    this.lastStats = this.emptyStats();
+    this.failed = 0;
   }
 
-  chooseZoom(altitude) {
-    if (altitude > 6500) return null;
-    if (altitude > 1800) return 14;
-    return 15;
+  emptyStats() {
+    return { total: 0, rendered: 0, explicitHeight: 0, overlayHeight: 0, floorsHeight: 0, estimatedHeight: 0, roofs: 0, equipment: 0 };
+  }
+
+  chooseZoom(altitude, quality) {
+    if (altitude > 32000) return null;
+    let z = altitude > 12000 ? 12 : altitude > 5200 ? 13 : altitude > 1700 ? 14 : 15;
+    z = Math.min(z, quality.maxBuildingZoom);
+    if (this.provider.header?.maxZoom != null) z = Math.min(z, this.provider.header.maxZoom);
+    if (this.provider.header?.minZoom != null) z = Math.max(z, this.provider.header.minZoom);
+    return z;
+  }
+
+  detailForZoom(z) {
+    return z >= 15 ? 'near' : z >= 14 ? 'medium' : 'far';
   }
 
   async update(lon, lat, altitude, quality) {
-    let z = this.chooseZoom(altitude);
+    const z = this.chooseZoom(altitude, quality);
     if (z == null) {
-      this.clearVisible();
+      this.hideAll();
       return;
     }
-    if (this.provider.header?.maxZoom != null) z = Math.min(z, this.provider.header.maxZoom);
-    if (this.provider.header?.minZoom != null) z = Math.max(z, this.provider.header.minZoom);
-
     const center = lonLatToTile(lon, lat, z);
     const radius = quality.buildingRadius;
     const desired = new Set();
     const requests = [];
+    const detail = this.detailForZoom(z);
+    const effectiveMinArea = quality.minBuildingArea * (z <= 12 ? 8 : detail === 'far' ? 4 : detail === 'medium' ? 1.8 : 1);
 
     for (let dx = -radius; dx <= radius; dx++) {
       for (let dy = -radius; dy <= radius; dy++) {
@@ -41,49 +56,102 @@ export class BuildingTileManager {
         const y = center.y + dy;
         const key = tileKey(z, x, y);
         desired.add(key);
-        if (!this.tiles.has(key)) requests.push(this.loadTile(z, x, y, quality, this.generation));
+        const existing = this.tiles.get(key);
+        if (existing?.group && existing.detail === detail && existing.minArea === effectiveMinArea) {
+          existing.group.visible = true;
+          existing.lastUsed = performance.now();
+        } else if (!existing?.loading) {
+          const priority = dx * dx + dy * dy;
+          requests.push(this.queue.add(() => this.loadTile(z, x, y, effectiveMinArea, detail, this.generation), priority));
+        } else if (existing?.promise) {
+          requests.push(existing.promise);
+        }
       }
     }
+
     this.desired = desired;
-    for (const [key, tile] of this.tiles) if (!desired.has(key)) this.removeTile(key, tile);
     await Promise.allSettled(requests);
+    for (const [key, tile] of this.tiles) {
+      if (tile.group) tile.group.visible = desired.has(key);
+    }
+    this.prune(quality.buildingCache);
     this.recomputeStats();
   }
 
-  async loadTile(z, x, y, quality, generation) {
+  async loadTile(z, x, y, minArea, detail, generation) {
     const key = tileKey(z, x, y);
-    this.tiles.set(key, { loading: true, z, x, y });
-    try {
-      const features = await this.provider.getFeatures(z, x, y);
-      if (generation !== this.generation || !this.desired.has(key)) {
+    const stale = this.tiles.get(key);
+    if (stale?.group) this.removeTile(key, stale);
+
+    const promise = (async () => {
+      try {
+        const [features, overlayResolver] = await Promise.all([
+          this.provider.getFeatures(z, x, y),
+          this.heightOverlay?.resolverForBuildingTile(z, x, y) || null
+        ]);
+        if (generation !== this.generation) return;
+        const group = buildBuildingTile({
+          features,
+          originLon: this.originLon,
+          originLat: this.originLat,
+          minArea,
+          materials: this.materials,
+          terrain: this.terrain,
+          overlayResolver,
+          detail
+        });
+        group.userData.tileKey = key;
+        group.visible = this.desired.has(key);
+        this.scene.add(group);
+        this.tiles.set(key, {
+          z, x, y, group, stats: group.userData.stats, detail, minArea,
+          lastUsed: performance.now(), loading: false
+        });
+      } catch (error) {
+        this.failed++;
         this.tiles.delete(key);
-        return;
+        console.warn('Overture building tile failed', key, error);
       }
-      const group = buildBuildingTile({
-        features,
-        originLon: this.originLon,
-        originLat: this.originLat,
-        minArea: quality.minBuildingArea,
-        materials: this.materials,
-        terrain: this.terrain
-      });
-      group.userData.tileKey = key;
-      this.scene.add(group);
-      this.tiles.set(key, { z, x, y, group, stats: group.userData.stats });
-    } catch (error) {
-      this.tiles.delete(key);
-      console.warn('Overture building tile failed', key, error);
-    }
+    })();
+
+    this.tiles.set(key, { loading: true, z, x, y, promise, detail, minArea, lastUsed: performance.now() });
+    return promise;
   }
 
   recomputeStats() {
-    const total = { total: 0, rendered: 0, explicitHeight: 0, floorsHeight: 0, estimatedHeight: 0 };
+    const total = this.emptyStats();
     for (const tile of this.tiles.values()) {
-      const s = tile.stats;
-      if (!s) continue;
-      for (const key of Object.keys(total)) total[key] += s[key] || 0;
+      if (!tile.group?.visible || !tile.stats) continue;
+      for (const key of Object.keys(total)) total[key] += tile.stats[key] || 0;
     }
     this.lastStats = total;
+  }
+
+  pick(worldX, worldZ) {
+    let best = null;
+    for (const tile of this.tiles.values()) {
+      if (!tile.group?.visible) continue;
+      for (const item of tile.group.userData.pickables || []) {
+        const b = item.bbox;
+        if (worldX < b.minX || worldX > b.maxX || worldZ < b.minZ || worldZ > b.maxZ) continue;
+        if (!pointInRing(worldX, worldZ, item.ring)) continue;
+        if (!best || item.area < best.area) best = item;
+      }
+    }
+    return best;
+  }
+
+  hideAll() {
+    for (const tile of this.tiles.values()) if (tile.group) tile.group.visible = false;
+    this.desired.clear();
+    this.recomputeStats();
+  }
+
+  prune(limit) {
+    const cached = [...this.tiles.entries()].filter(([, tile]) => tile.group && !tile.group.visible);
+    cached.sort((a, b) => (a[1].lastUsed || 0) - (b[1].lastUsed || 0));
+    const removeCount = Math.max(0, this.tiles.size - limit);
+    for (let i = 0; i < Math.min(removeCount, cached.length); i++) this.removeTile(cached[i][0], cached[i][1]);
   }
 
   removeTile(key, tile) {
@@ -94,16 +162,27 @@ export class BuildingTileManager {
     this.tiles.delete(key);
   }
 
-  clearVisible() {
+  invalidate() {
     this.generation++;
+    this.queue.clearPending();
     for (const [key, tile] of this.tiles) this.removeTile(key, tile);
     this.desired.clear();
     this.recomputeStats();
   }
 
+  clearVisible() {
+    this.invalidate();
+  }
+
   getStats() {
-    let loading = 0, loaded = 0;
-    for (const tile of this.tiles.values()) tile.loading ? loading++ : loaded++;
-    return { ...this.lastStats, loading, loaded };
+    let loading = 0, loaded = 0, visibleTiles = 0;
+    for (const tile of this.tiles.values()) {
+      if (tile.loading) loading++;
+      else if (tile.group) {
+        loaded++;
+        if (tile.group.visible) visibleTiles++;
+      }
+    }
+    return { ...this.lastStats, loading, loaded, visibleTiles, cached: loaded - visibleTiles, failed: this.failed };
   }
 }

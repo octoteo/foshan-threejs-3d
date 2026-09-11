@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
-import { resolveBuildingHeight, resolveMinHeight } from '../src/buildingHeights.js';
-
-assert.deepEqual(resolveBuildingHeight({ height: 42 }, 200), { height: 42, source: 'overture-height', confidence: 'high' });
-assert.deepEqual(resolveBuildingHeight({ num_floors: 10 }, 200), { height: 32, source: 'overture-num-floors', confidence: 'medium' });
-const a = resolveBuildingHeight({ subtype: 'residential' }, 500);
-const b = resolveBuildingHeight({ subtype: 'residential' }, 500);
-assert.deepEqual(a, b, 'visual estimate must be deterministic');
-assert.equal(a.source, 'deterministic-visual-estimate');
-assert.equal(resolveMinHeight({ min_height: 6 }), 6);
-assert.equal(resolveMinHeight({ min_floor: 2 }), 6.4);
+import { resolveBuildingHeight, resolveMinHeight, resolveRoofHeight } from '../src/buildingHeights.js';
+let h = resolveBuildingHeight({ height: 42 }, 100);
+assert.equal(h.height, 42); assert.equal(h.source, 'overture-height'); assert.equal(h.dataBacked, true);
+h = resolveBuildingHeight({}, 100, { height: 31, source: '3d-globfp' });
+assert.equal(h.height, 31); assert.equal(h.source, '3d-globfp'); assert.equal(h.dataBacked, true);
+h = resolveBuildingHeight({ subtype: 'residential', num_floors: 10 }, 400);
+assert.equal(h.height, 32); assert.equal(h.source, 'overture-num-floors');
+const a = resolveBuildingHeight({ __id: 'same', subtype: 'residential' }, 400);
+const b = resolveBuildingHeight({ __id: 'same', subtype: 'residential' }, 400);
+assert.deepEqual(a, b); assert.equal(a.dataBacked, false);
+assert.equal(resolveMinHeight({ min_floor: 2, subtype: 'residential' }), 6.4);
+assert.ok(resolveRoofHeight({ roof_shape: 'gabled' }, 30) > 0);
+assert.equal(resolveRoofHeight({ roof_shape: 'flat' }, 30), 0);
 console.log('heights: PASS');

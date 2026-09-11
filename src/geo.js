@@ -18,13 +18,19 @@ export function worldToLonLat(x, z, originLon, originLat) {
   return { lon, lat };
 }
 
-export function lonLatToTile(lon, lat, z) {
+export function lonLatToTileFloat(lon, lat, z) {
   const n = 2 ** z;
   const safeLat = clamp(lat, -MAX_LAT, MAX_LAT);
-  const x = Math.floor(((lon + 180) / 360) * n);
+  const x = ((lon + 180) / 360) * n;
   const latRad = safeLat * DEG;
-  const y = Math.floor((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2 * n);
-  return { x: clamp(x, 0, n - 1), y: clamp(y, 0, n - 1), z };
+  const y = (1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2 * n;
+  return { x, y, z };
+}
+
+export function lonLatToTile(lon, lat, z) {
+  const n = 2 ** z;
+  const t = lonLatToTileFloat(lon, lat, z);
+  return { x: clamp(Math.floor(t.x), 0, n - 1), y: clamp(Math.floor(t.y), 0, n - 1), z };
 }
 
 export function tileToLonLat(x, y, z) {
@@ -53,16 +59,42 @@ export function polygonAreaMeters(ring, originLon, originLat) {
   if (!ring || ring.length < 3) return 0;
   let twice = 0;
   const pts = ring.map(([lon, lat]) => lonLatToWorld(lon, lat, originLon, originLat));
-  for (let i = 0; i < pts.length - 1; i++) twice += pts[i].x * pts[i + 1].z - pts[i + 1].x * pts[i].z;
+  const count = pts.length;
+  for (let i = 0; i < count; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % count];
+    twice += a.x * b.z - b.x * a.z;
+  }
   return Math.abs(twice) * 0.5;
 }
 
 export function polygonCentroid(ring) {
   if (!ring?.length) return null;
   let lon = 0, lat = 0, count = 0;
-  for (const point of ring) {
+  const limit = ring.length > 1 && ring[0][0] === ring.at(-1)[0] && ring[0][1] === ring.at(-1)[1]
+    ? ring.length - 1
+    : ring.length;
+  for (let i = 0; i < limit; i++) {
+    const point = ring[i];
     if (!Array.isArray(point) || point.length < 2) continue;
     lon += point[0]; lat += point[1]; count++;
   }
   return count ? [lon / count, lat / count] : null;
+}
+
+export function metersBetween(lon1, lat1, lon2, lat2) {
+  const x = (lon2 - lon1) * DEG * R * Math.cos(((lat1 + lat2) * 0.5) * DEG);
+  const y = (lat2 - lat1) * DEG * R;
+  return Math.hypot(x, y);
+}
+
+export function pointInRing(x, z, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i].x, zi = ring[i].z;
+    const xj = ring[j].x, zj = ring[j].z;
+    const intersect = ((zi > z) !== (zj > z)) && (x < (xj - xi) * (z - zi) / ((zj - zi) || 1e-9) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
 }

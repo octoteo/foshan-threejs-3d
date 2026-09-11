@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
-cd "$(dirname "$0")"
+set -eu
 node scripts/serve.mjs

@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+assert.equal(new Set(ids).size, ids.length, 'duplicate HTML ids');
+const refs = [...main.matchAll(/\$\(['"]#([^'"]+)['"]\)/g)].map(m => m[1]);
+for (const id of refs) assert.ok(ids.includes(id), `main references missing #${id}`);
+for (const required of ['scene','status','attribution','qualitySelect','imagerySelect','landmarkList','inspector']) assert.ok(ids.includes(required), required);
+console.log('dom: PASS');

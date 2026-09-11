@@ -1,13 +1,14 @@
 {
   "name": "foshan-threejs-3d",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Open-data-first photorealistic hybrid 3D viewer for Foshan built with Three.js.",
+  "description": "Open-data-first high-fidelity 3D city viewer for Foshan built with Three.js.",
   "scripts": {
     "serve": "node scripts/serve.mjs",
-    "test": "node tests/geo.mjs && node tests/heights.mjs && node tests/acceptance.mjs",
-    "check": "node --check src/main.js && node --check src/providers/overtureBuildings.js && node --check src/providers/terrain.js && node --check src/render/buildingTile.js && npm test",
-    "network-smoke": "node tests/network-smoke.mjs"
+    "test": "node tests/geo.mjs && node tests/heights.mjs && node tests/roof.mjs && node tests/dom.mjs && node tests/acceptance.mjs",
+    "check": "node --check src/main.js && node --check src/providers/overtureBuildings.js && node --check src/providers/terrain.js && node --check src/providers/buildingTiles.js && node --check src/providers/heightOverlay.js && node --check src/render/buildingTile.js && node --check src/render/materials.js && node --check src/render/roof.js && npm test",
+    "network-smoke": "node tests/network-smoke.mjs",
+    "build-height-overlay": "node tools/build-height-overlay.mjs"
   }
 }

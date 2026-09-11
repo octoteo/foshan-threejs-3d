@@ -6,13 +6,50 @@ on:
 permissions:
   contents: read
 jobs:
-  check:
-    runs-on: ubuntu-latest
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm run check
-      - name: Verify live open-data endpoints over Foshan
+      - name: Static and algorithm checks
+        run: npm run check
+      - name: Verify live Foshan open-data endpoints
         run: npm run network-smoke
+      - name: Start local viewer
+        run: |
+          npm run serve > /tmp/foshan-server.log 2>&1 &
+          echo $! > /tmp/foshan-server.pid
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 0.5
+          done
+          cat /tmp/foshan-server.log
+          exit 1
+      - name: Browser smoke with Chrome / SwiftShader
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
+            --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
+            --virtual-time-budget=22000 --window-size=1440,900 \
+            --dump-dom http://127.0.0.1:4173/ > /tmp/foshan-dom.html
+          grep -q 'data-app-ready="true"' /tmp/foshan-dom.html
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
+            --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
+            --virtual-time-budget=14000 --window-size=1440,900 \
+            --screenshot=/tmp/foshan-v1.png http://127.0.0.1:4173/
+          test -s /tmp/foshan-v1.png
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foshan-v1-browser-evidence
+          path: |
+            /tmp/foshan-v1.png
+            /tmp/foshan-dom.html
+            /tmp/foshan-server.log
+          if-no-files-found: ignore
+          retention-days: 14

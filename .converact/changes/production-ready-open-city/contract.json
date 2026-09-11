@@ -1,0 +1,62 @@
+{
+  "intent": "Converge the Foshan open-data 3D viewer into a complete, resilient and honestly-described v1.0 product that works without paid photogrammetry by default.",
+  "constraints": [
+    "Three.js remains the rendering engine.",
+    "Default use requires no paid API key.",
+    "Real geographic data and visual estimation must remain distinguishable in UI and documentation.",
+    "No unlicensed landmark meshes may be bundled.",
+    "No Overpass/OSM extrusion fallback may replace Overture as the default high-fidelity building path."
+  ],
+  "nonGoals": [
+    "Claiming generated facade details are surveyed real-world facade details.",
+    "Redistributing Google Earth photogrammetry or other proprietary mesh data.",
+    "Bundling multi-gigabyte national height datasets in the repository."
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "type": "behavior",
+      "statement": "The zero-key default path loads Overture buildings, Terrarium terrain and open satellite imagery by viewport.",
+      "priority": "must",
+      "scope": ["src/providers/**", "src/main.js"],
+      "checks": ["CHK-001", "CHK-002", "CHK-003"]
+    },
+    {
+      "id": "REQ-002",
+      "type": "invariant",
+      "statement": "Building height sources are prioritized and surfaced truthfully, with optional local open-height overlay support.",
+      "priority": "must",
+      "scope": ["src/buildingHeights.js", "src/providers/heightOverlay.js", "src/ui/inspector.js"],
+      "checks": ["CHK-001"]
+    },
+    {
+      "id": "REQ-003",
+      "type": "behavior",
+      "statement": "Near buildings use categorized PBR facades, roof attributes and safe deterministic visual detail without Math.random.",
+      "priority": "must",
+      "scope": ["src/render/**"],
+      "checks": ["CHK-001"]
+    },
+    {
+      "id": "REQ-004",
+      "type": "reliability",
+      "statement": "Tile loading has bounded concurrency, retry, stale-view handling and bounded cache eviction.",
+      "priority": "must",
+      "scope": ["src/providers/**"],
+      "checks": ["CHK-001", "CHK-003"]
+    },
+    {
+      "id": "REQ-005",
+      "type": "behavior",
+      "statement": "The viewer provides adaptive quality, landmark flight, building inspection, shareable view state, day lighting and responsive UI.",
+      "priority": "must",
+      "scope": ["src/main.js", "src/ui/**", "index.html", "src/styles.css"],
+      "checks": ["CHK-001", "CHK-003"]
+    }
+  ],
+  "checks": [
+    { "id": "CHK-001", "kind": "command", "description": "Static, geo, height, roof and policy tests pass.", "command": "npm run check" },
+    { "id": "CHK-002", "kind": "command", "description": "Pinned public data endpoints are reachable.", "command": "npm run network-smoke" },
+    { "id": "CHK-003", "kind": "manual", "description": "CI browser smoke loads the real page to appReady=true and produces a screenshot artifact." }
+  ]
+}
