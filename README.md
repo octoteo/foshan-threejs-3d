@@ -1,4 +1,4 @@
-# 佛山真实 3D · Open Photorealistic Hybrid
+# 佛山真实 3D · Open Photorealistic Hybrid v1.0.1
 
 一个用 **Three.js** 构建、默认零付费 API Key 即可运行的佛山高保真三维城市浏览器。
 
@@ -17,14 +17,24 @@
 - **建筑检查器**：单击近景建筑可查看高度来源、可信度、楼层、占地、类型、屋顶、Overture ID。
 - **性能工程**：地形/建筑请求并发队列、重试、LRU 式视野缓存、距离 LOD、自动画质、WebGL context 恢复。
 - **城市浏览体验**：佛山全景、七个地标飞行、昼夜光照、软阴影、视角 URL 分享、全屏、键盘操作。
-- **地标模型扩展**：`assets/landmarks/manifest.json` 可叠加有合法授权的 GLB；仓库默认不捆绑来源不明模型。
+- **地标模型扩展**：`public/assets/landmarks/manifest.json` 可叠加有合法授权的 GLB；仓库默认不捆绑来源不明模型。
 
 ## 运行
 
-需要 Node.js 18+（推荐 Node.js 22）。项目运行时依赖通过固定版本 ESM CDN 加载，无需 `npm install`。
+需要 Node.js 22.12+。v1.0.1 起不再依赖浏览器运行时 CDN import map，而是通过固定 npm 版本 + Vite 打包，避免 CDN 模块链导致白屏。
+
+首次运行：
 
 ```bash
-npm run serve
+npm install
+npm run dev
+```
+
+生产构建：
+
+```bash
+npm run build
+npm run preview
 ```
 
 浏览器打开：
@@ -62,14 +72,14 @@ Overture 版本固定到 `2026-08-19.0`，避免上游 schema 突然变化破坏
 假设 `foshan-heights.geojson` 中有 `height` 字段：
 
 ```bash
-node tools/build-height-overlay.mjs foshan-heights.geojson data/heights --zoom 14 --source 3d-globfp --height-field height
+node tools/build-height-overlay.mjs foshan-heights.geojson public/data/heights --zoom 14 --source 3d-globfp --height-field height
 ```
 
 生成：
 
 ```text
-data/heights/manifest.json
-data/heights/14/<x>/<y>.json
+public/data/heights/manifest.json
+public/data/heights/14/<x>/<y>.json
 ```
 
 浏览器重新加载后会自动发现并启用高度增强。匹配采用局部空间最近邻，并设置最大匹配距离，避免把高度误配给远处建筑。
@@ -112,7 +122,7 @@ npm run check
 npm run network-smoke
 ```
 
-GitHub Actions 还会启动真实页面，通过 headless Chrome + SwiftShader 访问本地服务，等待开放数据加载并生成浏览器截图 artifact。
+GitHub Actions 会安装固定依赖、生成 Vite 生产 bundle，再通过 headless Chrome + SwiftShader 打开生产预览，等待 `data-app-ready="true"` 并生成截图与 `dist/` artifact。
 
 ## 真实性边界
 
@@ -135,6 +145,7 @@ GitHub Actions 还会启动真实页面，通过 headless Chrome + SwiftShader �
 ## 主要版本
 
 - Three.js `0.186.0`
+- Vite `8.2.2`
 - PMTiles `4.5.0`
 - @mapbox/vector-tile `3.0.0`
 - Overture Maps data `2026-08-19.0`

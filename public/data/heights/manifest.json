@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "enabled": false,
+  "name": "Optional Foshan building-height overlay",
+  "zoom": 14,
+  "template": "./data/heights/{z}/{x}/{y}.json",
+  "source": "3d-globfp",
+  "confidence": "medium",
+  "maxDistanceMeters": 32
+}

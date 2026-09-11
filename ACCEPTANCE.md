@@ -2,6 +2,7 @@
 
 ## 1. 可运行性（MUST）
 
+- 生产版本必须使用固定 npm 依赖生成本地 bundle，不允许把浏览器运行时 CDN import map 作为主启动链。
 - 默认模式不要求付费 API Key。
 - 浏览器打开后必须能加载真实地形、卫星影像和 Overture 建筑数据。
 - 外部单个瓦片失败不得导致应用白屏；必须允许后续视野更新继续恢复。
@@ -54,11 +55,13 @@ npm run network-smoke
 
 GitHub Actions 必须进一步完成：
 
-1. `npm run check`；
-2. 从佛山坐标访问 Overture PMTiles、Terrarium、EOX 和 Three.js ESM；
-3. 启动本地 Web 服务；
-4. headless Chrome 加载页面并等待 `data-app-ready="true"`；
-5. 生成浏览器截图 artifact。
+1. `npm install` 安装固定版本依赖；
+2. `npm run check`；
+3. `npm run build` 生成生产 bundle；
+4. 从佛山坐标访问 Overture PMTiles、Terrarium、EOX；
+5. 启动 `vite preview`；
+6. headless Chrome 加载生产 bundle，并验证 `data-shell-ready` 与 `data-app-ready="true"`；
+7. 生成浏览器截图与 `dist/` artifact。
 
 ## 8. 摄影测量真实性（独立增强门槛）
 

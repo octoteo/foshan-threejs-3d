@@ -5,7 +5,8 @@
     "Default use requires no paid API key.",
     "Real geographic data and visual estimation must remain distinguishable in UI and documentation.",
     "No unlicensed landmark meshes may be bundled.",
-    "No Overpass/OSM extrusion fallback may replace Overture as the default high-fidelity building path."
+    "No Overpass/OSM extrusion fallback may replace Overture as the default high-fidelity building path.",
+    "Production startup must not depend on runtime CDN import maps; browser dependencies are pinned and bundled locally."
   ],
   "nonGoals": [
     "Claiming generated facade details are surveyed real-world facade details.",
@@ -52,11 +53,19 @@
       "priority": "must",
       "scope": ["src/main.js", "src/ui/**", "index.html", "src/styles.css"],
       "checks": ["CHK-001", "CHK-003"]
+    },
+    {
+      "id": "REQ-006",
+      "type": "reliability",
+      "statement": "Production builds bundle pinned Three.js and tile-decoding dependencies locally and browser CI executes the bundled app.",
+      "priority": "must",
+      "scope": ["package.json", "vite.config.js", "index.html", ".github/workflows/ci.yml"],
+      "checks": ["CHK-001", "CHK-003"]
     }
   ],
   "checks": [
-    { "id": "CHK-001", "kind": "command", "description": "Static, geo, height, roof and policy tests pass.", "command": "npm run check" },
-    { "id": "CHK-002", "kind": "command", "description": "Pinned public data endpoints are reachable.", "command": "npm run network-smoke" },
-    { "id": "CHK-003", "kind": "manual", "description": "CI browser smoke loads the real page to appReady=true and produces a screenshot artifact." }
+    {"id": "CHK-001", "kind": "command", "description": "Static, geo, height, roof, DOM, policy and bundling-contract tests pass.", "command": "npm run check"},
+    {"id": "CHK-002", "kind": "command", "description": "Pinned public data endpoints are reachable.", "command": "npm run network-smoke"},
+    {"id": "CHK-003", "kind": "manual", "description": "CI browser smoke loads the real page to appReady=true and produces a screenshot artifact."}
   ]
 }

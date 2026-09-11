@@ -7,17 +7,6 @@
   <meta name="description" content="基于 Three.js 与开放地理数据构建的佛山高保真 3D 城市浏览器" />
   <title>佛山真实 3D · Three.js</title>
   <link rel="stylesheet" href="./src/styles.css" />
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://esm.sh/three@0.186.0",
-      "three/addons/": "https://esm.sh/three@0.186.0/examples/jsm/",
-      "pmtiles": "https://esm.sh/pmtiles@4.5.0",
-      "@mapbox/vector-tile": "https://esm.sh/@mapbox/vector-tile@3.0.0",
-      "pbf": "https://esm.sh/pbf@5.1.2"
-    }
-  }
-  </script>
 </head>
 <body>
   <div id="app">
@@ -129,6 +118,7 @@
     <div id="attribution" class="attribution glass"></div>
     <div class="crosshair" aria-hidden="true"></div>
   </div>
+  <script>document.documentElement.dataset.shellReady = "true";</script>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

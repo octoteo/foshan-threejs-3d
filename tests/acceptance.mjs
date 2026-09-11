@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const files = await Promise.all([
-  'index.html', 'src/main.js', 'src/config.js', 'src/providers/overtureBuildings.js',
+  'index.html', 'package.json', 'vite.config.js', 'src/main.js', 'src/config.js', 'src/providers/overtureBuildings.js',
   'src/providers/terrain.js', 'src/providers/buildingTiles.js', 'src/providers/heightOverlay.js',
   'src/render/buildingTile.js', 'src/render/materials.js', 'README.md', 'ACCEPTANCE.md'
 ].map(async path => [path, await readFile(new URL(`../${path}`, import.meta.url), 'utf8')]));
@@ -14,7 +14,9 @@ assert.ok(all.includes('heightOverlay') || all.includes('height overlay'), 'heig
 assert.ok(all.includes('roof_shape'), 'roof attribute support');
 assert.ok(all.includes('自动画质') || all.includes("qualityMode !== 'auto'"), 'adaptive quality');
 assert.ok(all.includes('data-inspector'), 'building inspector');
-assert.ok(all.includes('three@0.186.0'), 'current Three.js release line');
+assert.ok(all.includes('"three": "0.186.0"'), 'pinned Three.js dependency');
+assert.ok(all.includes('"vite": "8.2.2"'), 'pinned Vite build dependency');
+assert.ok(!all.includes('type="importmap"'), 'production no longer depends on runtime CDN import maps');
 assert.ok(!/overpass-api|Overpass|api\/interpreter/i.test(runtime), 'no Overpass default building path');
 assert.ok(!all.includes('Math.random'), 'no random building height/detail generation');
 console.log('acceptance: PASS');

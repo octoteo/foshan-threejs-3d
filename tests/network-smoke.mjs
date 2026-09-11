@@ -1,8 +1,7 @@
 const urls = [
   ['Overture PMTiles', 'https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/buildings.pmtiles', { headers: { Range: 'bytes=0-16383' } }],
   ['Foshan Terrarium', 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/13/6670/3553.png', {}],
-  ['Foshan EOX imagery', 'https://e.tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/GoogleMapsCompatible/13/3553/6670.jpg', {}],
-  ['Three.js ESM', 'https://esm.sh/three@0.186.0', {}]
+  ['Foshan EOX imagery', 'https://e.tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/GoogleMapsCompatible/13/3553/6670.jpg', {}]
 ];
 for (const [name, url, options] of urls) {
   const controller = new AbortController();

@@ -8,40 +8,58 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned runtime/build dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
       - name: Static and algorithm checks
         run: npm run check
+      - name: Production bundle
+        run: npm run build
       - name: Verify live Foshan open-data endpoints
         run: npm run network-smoke
-      - name: Start local viewer
+      - name: Start production preview
         run: |
-          npm run serve > /tmp/foshan-server.log 2>&1 &
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/foshan-server.log 2>&1 &
           echo $! > /tmp/foshan-server.pid
-          for i in {1..20}; do
+          for i in {1..30}; do
             if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
             sleep 0.5
           done
           cat /tmp/foshan-server.log
           exit 1
-      - name: Browser smoke with Chrome / SwiftShader
+      - name: Browser smoke with bundled production app
         run: |
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -n "$CHROME"
           "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
             --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
-            --virtual-time-budget=22000 --window-size=1440,900 \
-            --dump-dom http://127.0.0.1:4173/ > /tmp/foshan-dom.html
-          grep -q 'data-app-ready="true"' /tmp/foshan-dom.html
+            --virtual-time-budget=26000 --window-size=1440,900 \
+            --screenshot=/tmp/foshan-v1.png http://127.0.0.1:4173/ || true
           "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
             --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
-            --virtual-time-budget=14000 --window-size=1440,900 \
-            --screenshot=/tmp/foshan-v1.png http://127.0.0.1:4173/
+            --virtual-time-budget=30000 --window-size=1440,900 \
+            --dump-dom http://127.0.0.1:4173/ > /tmp/foshan-dom.html
+          grep -q 'data-shell-ready="true"' /tmp/foshan-dom.html
+          grep -q 'data-app-ready="true"' /tmp/foshan-dom.html || {
+            grep -o 'data-runtime-error="[^"]*"' /tmp/foshan-dom.html || true
+            grep -o '<div id="status"[^>]*>[^<]*' /tmp/foshan-dom.html || true
+            exit 1
+          }
           test -s /tmp/foshan-v1.png
+      - name: Upload production bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foshan-v1-dist
+          path: |
+            dist
+            package-lock.json
+          retention-days: 14
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
