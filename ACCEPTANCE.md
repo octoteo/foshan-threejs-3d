@@ -1,52 +1,76 @@
-# 佛山 Open Photorealistic Hybrid v1.0 验收标准
+# 佛山数字城市 Stage 2 验收标准
 
-## 1. 可运行性（MUST）
+## 1. 产品边界
 
-- 生产版本必须使用 `package-lock.json` + `npm ci` 安装固定依赖，并由 Vite 生成本地 bundle；不得依赖浏览器运行时 CDN import map。
-- 默认模式不要求付费 API Key。
-- `data-app-ready="true"` 只有在首屏真实 Overture 建筑已生成且建筑数大于 0 后才能设置。
-- 首屏采用渐进加载；达到可交互状态后再后台扩展周边高负载瓦片。
-- 外部单个瓦片失败不得导致永久白屏；后续视野更新必须可继续恢复。
-- WebGL context 恢复后必须重新加载可见数据。
+Stage 2 的验收对象是“地图优先的佛山数字城市底座”，不是单独的 Three.js 3D Demo。
 
-## 2. 地理真实性（MUST）
+必须同时成立：
 
-- 建筑 footprint / building_part 来自 Overture Buildings，不使用 Overpass/随机城市生成器作为默认数据源。
-- 完整建筑 footprint 使用 Overture z14；不得把低 zoom 的质心/简化表达直接拉伸成所谓真实建筑。
-- 高度按 `Overture height → 开放高度增强 → num_floors → 确定性视觉估算` 解析。
-- UI 必须展示数据支撑高度占比；视觉估算不得描述为实测高度。
-- 地形来自 Terrarium 高程瓦片，不能用整城平面冒充真实地形。
-- 佛山地标导航使用 WGS84 真实坐标。
+1. 2D 是完整可用的城市地图；
+2. 3D 使用同一地理坐标和地图相机；
+3. 道路、水系、建筑、地形来自真实开放地理数据；
+4. 普通建筑具备城市级流式性能；
+5. 核心地标可以用独立高细节资产覆盖普通建筑层。
 
-## 3. 视觉真实性（MUST）
+## 2. 构建与启动（MUST）
 
-- 普通建筑不得统一灰盒；必须按用途和可用 facade 属性生成不同 PBR 立面。
-- 屋顶读取 `roof_shape / roof_color / roof_material / roof_height` 等可用字段；复杂 footprint 必须安全回退为平屋顶，不能产生破面。
-- 近景允许增加确定性的屋顶设备、窗格、阳台节奏等视觉增强，但不得描述为现实逐项测量结果。
-- 昼夜光照、雾、大气与阴影不得改变地理坐标或高度语义。
+- 使用 `package-lock.json + npm ci` 固定依赖。
+- Vite 生产构建必须同时生成 Stage 2 默认入口与 `legacy.html`。
+- 默认地图不要求付费 API Key。
+- MapLibre v6 Worker 必须经过 Vite worker pipeline 打包；生产环境不得出现“Raster 正常、Vector source 静默失效”。
+- 运行时第三方数据异常不得导致整个 UI 白屏。
 
-## 4. 交互与可用性（MUST）
+## 3. 2D 地图事实（MUST）
 
-- 支持旋转、平移、缩放、佛山全景和七个地标飞行。
-- 支持自动/性能/均衡/超清画质；自动模式在持续低 FPS 时降低负载。
-- 支持单击近景建筑查看高度来源、可信度、占地、类型、楼层和 Overture ID。
-- 支持复制当前视角 URL并恢复相机视角。
-- 移动端 UI 不得遮满整个画布。
+- 真实道路 geometry 来自 Overture Transportation，而非手绘近似线。
+- 真实水系 geometry 来自 Overture Base / Water，而非手绘近似面。
+- OpenFreeMap/OpenMapTiles 可以补充地点、POI、行政与文字标签，但不得成为道路/水系真实性的唯一来源。
+- 浏览器验收必须在佛山视野实际得到 `roadFeatures > 0` 与 `waterFeatures > 0`。
+- 默认影像层必须可以真实加载；当前为 EOX Sentinel-2 2016。
+- 所有自有叠加层统一使用 WGS84 / Web Mercator。
 
-## 5. 性能与稳定性（MUST）
+## 4. 3D 城市（MUST）
 
-- 建筑与地形按视野瓦片加载，不一次性载入全佛山。
-- 请求有并发上限和失败重试。
-- 离开视野的瓦片进入受限缓存并按 LRU 思路回收。
-- 远景只加载中心真实建筑瓦片并使用低细节材质；进入中近景后再扩展周边瓦片和屋顶细节。
+- 普通建筑由 Overture Buildings vector source + MapLibre `fill-extrusion` 渲染。
+- Stage 2 默认入口不得逐栋调用 Three.js `ExtrudeGeometry` 生成整城普通建筑。
+- 建筑高度按 Overture `height → num_floors × 3.2m → 明确的视觉兜底`表达。
+- 3D 模式开启 Terrarium terrain，并保持同一道路/水系/地名布局。
+- 生产浏览器 3D 验收必须得到 `threeDBuildings=visible`，不能只显示倾斜卫星平面。
 
-## 6. 可扩展数据（MUST）
+## 5. 精细地标（MUST）
 
-- 支持可选局部建筑高度增强 manifest，无需修改主渲染核心。
-- 提供无第三方依赖的 GeoJSON → 高度瓦片预处理脚本。
-- 支持合法授权 GLB 地标 manifest；默认仓库不捆绑来源/许可不明模型。
+首批至少 5 个地标必须具有独立高细节重建，而不是普通建筑挤出：
 
-## 7. 自动证据
+- 世纪莲体育场
+- 岭南明珠体育馆
+- 顺峰山公园牌坊
+- 南风古灶
+- 佛山大剧院
+
+要求：
+
+- 使用独立材质 / 几何批次，并控制 draw call；
+- CI 对三角面复杂度与公开尺寸范围设置下限，防止模型退化成盒子；
+- 模型通过 Three.js Custom Layer 进入 MapLibre 地理相机；
+- 模型 manifest 明确 WGS84 坐标、尺度依据和 fidelity；
+- 生产浏览器必须确认 `landmarkModelsLoaded=5`；
+- 参考重建必须明确标记为 `reference-reconstruction`，不得冒充测绘/摄影测量资产。
+
+## 6. 性能（MUST）
+
+- 矢量瓦片解析使用 MapLibre Worker；不得退回主线程逐栋建筑挤出。
+- 城市普通建筑由 GPU 矢量 extrusion 承担。
+- 全球 Overture archive 使用 HTTP Range / PMTiles，不一次性下载完整数据集。
+- Three.js 只承担数量受控的高价值 3D 资产。
+- 高精地标按材质合并 geometry，避免大量独立 Mesh draw call。
+
+## 7. 兼容与回归（MUST）
+
+- `legacy.html` 保留 Stage 1 Three.js 方案且必须继续构建。
+- 原有 geo / height / roof / DOM / building provider 回归测试继续通过。
+- Stage 2 不以删除旧实现来掩盖回归。
+
+## 8. 自动证据
 
 以下命令必须通过：
 
@@ -57,20 +81,19 @@ npm run build
 npm run network-smoke
 ```
 
-GitHub Actions 必须进一步完成：
+自动验证至少包括：
 
-1. 使用 lockfile 的 `npm ci`；
-2. 静态、坐标、高度、屋顶、DOM、真实性规则测试；
-3. Vite 生产构建；
-4. 从佛山坐标访问 Overture PMTiles、Terrarium、EOX；
-5. 在佛山中心 z14 解码真实 Overture 建筑 Polygon；
-6. 通过项目 `OvertureBuildingsProvider` 后仍存在可渲染建筑；
-7. 将同一批真实建筑送入 `buildBuildingTile()` 并实际生成 Three.js Mesh；
-8. headless Chrome 加载生产 bundle，验证 `data-app-ready="true"` 且 `buildingStats > 0`；
-9. 生成浏览器截图与生产 `dist/` artifact。
+- Overture buildings / base / transportation 三个 PMTiles Range 请求；
+- 佛山中心真实 road segment 解码数量 > 0；
+- 佛山中心真实 water feature 解码数量 > 0；
+- Terrarium 与 EOX 可访问；
+- 5 个参考地标分别达到几何复杂度、尺度和批次预算；
+- Headless Chrome 2D：`appReady=true`、MapLibre worker configured、roads > 0、water > 0、5 models loaded；
+- Headless Chrome 3D：`mapMode=3d`、普通 3D buildings visible、5 models loaded；
+- 保存 2D / 3D 截图和 DOM 证据。
 
-## 8. 摄影测量真实性（独立增强门槛）
+## 9. 摄影测量真实性（独立更高门槛）
 
-当前 v1.0 的“完整可用”指开放数据混合城市浏览器完整可用，不等于已经取得佛山倾斜摄影原始 mesh。
+Stage 2 的“精细地标”是项目自建参考重建；普通城市是开放数据驱动的地图级 3D。
 
-只有接入佛山合法授权的倾斜摄影/CIM/实景三维/OGC 3D Tiles 后，才能额外声明“摄影测量真实性达到 Google Earth 3D 同类数据层级”。
+只有获得并接入合法的佛山倾斜摄影 / CIM / 实景三维 / OGC 3D Tiles 后，才能声明“摄影测量真实性达到 Google Earth 3D 同类数据层级”。这一门槛不会因为视觉上逼真而自动通过。

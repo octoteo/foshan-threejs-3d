@@ -1,15 +1,34 @@
 {
-  "intent":"Upgrade the Foshan viewer into Stage 2: a map-first digital-city core with fast 2D/3D switching, faithful roads/water layout, GPU city buildings and a dedicated high-detail landmark layer.",
-  "constraints":["Default map usage requires no paid API key.","The existing v1 Three.js viewer remains available as a legacy regression path.","Ordinary city buildings must no longer be generated via per-building Three.js ExtrudeGeometry in the Stage 2 entrypoint.","Road and water geometry must come from real open map vector data, not hand-authored approximations.","High-detail landmark assets may only be bundled when redistribution rights are verified.","WGS84/Web Mercator is the common geographic reference for Stage 2 layers."],
-  "nonGoals":["Pixel-copying Google Maps, Amap, or their proprietary visual styles.","Claiming planned landmark model slots are finished photogrammetry assets.","Replacing surveyed photogrammetry where no open or licensed source exists."],
-  "requirements":[
-    {"id":"REQ-201","type":"behavior","statement":"The default entrypoint uses MapLibre GL JS and supports interactive 2D and 3D modes in the same geographic camera.","priority":"must","scope":["index.html","src/stage2/**"],"checks":["CHK-201","CHK-203"]},
-    {"id":"REQ-202","type":"performance","statement":"Stage 2 ordinary buildings are rendered with vector-tile fill/fill-extrusion and not with per-building Three.js ExtrudeGeometry.","priority":"must","scope":["src/stage2/**"],"checks":["CHK-201"]},
-    {"id":"REQ-203","type":"behavior","statement":"The 2D map includes real road, water and label geometry from an open production basemap; 3D mode retains the same geographic layout.","priority":"must","scope":["src/stage2/main.js"],"checks":["CHK-202","CHK-203"]},
-    {"id":"REQ-204","type":"behavior","statement":"Overture buildings and Terrarium DEM are layered on the map for 3D buildings and terrain.","priority":"must","scope":["src/stage2/main.js"],"checks":["CHK-201","CHK-202","CHK-203"]},
-    {"id":"REQ-205","type":"architecture","statement":"A MapLibre custom layer backed by Three.js exists for licensed high-detail landmark GLB assets and reads the audited landmark manifest.","priority":"must","scope":["src/stage2/landmarkLayer.js","public/assets/landmarks/manifest.json"],"checks":["CHK-201"]},
-    {"id":"REQ-206","type":"behavior","statement":"At least ten Foshan landmark precision targets are exposed in Stage 2 navigation while unfinished model assets remain explicitly marked as planned.","priority":"must","scope":["src/stage2/landmarks.js","src/stage2/main.js"],"checks":["CHK-201"]},
-    {"id":"REQ-207","type":"compatibility","statement":"The v1 Three.js application remains buildable and accessible at legacy.html.","priority":"must","scope":["legacy.html","vite.config.js","src/main.js"],"checks":["CHK-201","CHK-203"]}
+  "intent": "Upgrade the Foshan viewer into Stage 2: a map-first digital-city core with fast 2D/3D switching, faithful road/water geography, GPU city buildings and a dedicated high-detail landmark layer.",
+  "constraints": [
+    "Default map usage requires no paid API key.",
+    "The existing v1 Three.js viewer remains available as a legacy regression path.",
+    "Ordinary city buildings must no longer be generated via per-building Three.js ExtrudeGeometry in the Stage 2 entrypoint.",
+    "Road and water geometry must come from real open vector data, not hand-authored approximations.",
+    "Landmark assets bundled by the project must be project-owned or have verified redistribution rights and must state their fidelity class.",
+    "WGS84/Web Mercator is the common geographic reference for Stage 2 layers.",
+    "Reference reconstructions must not be represented as surveyed or photogrammetric truth."
   ],
-  "checks":[{"id":"CHK-201","kind":"command","description":"Static Stage 2 and legacy regression checks pass.","command":"npm run check"},{"id":"CHK-202","kind":"command","description":"OpenFreeMap, Overture and terrain public data endpoints are reachable and expose transportation/water layers.","command":"npm run network-smoke"},{"id":"CHK-203","kind":"manual","description":"Production browser smoke reaches appReady=true with mapEngine=maplibre, buildingSource=ready and a rendered screenshot."}]
+  "nonGoals": [
+    "Pixel-copying Google Maps, Amap, or their proprietary visual styles.",
+    "Claiming reference-reconstruction landmarks are finished photogrammetry assets.",
+    "Replacing surveyed photogrammetry where no open or licensed source exists."
+  ],
+  "requirements": [
+    {"id":"REQ-201","type":"behavior","statement":"The default entrypoint uses MapLibre GL JS and supports interactive 2D and 3D modes in the same geographic camera.","priority":"must","scope":["index.html","src/stage2/**"],"checks":["CHK-201","CHK-203","CHK-204"]},
+    {"id":"REQ-202","type":"performance","statement":"Stage 2 ordinary buildings are rendered with vector-tile fill/fill-extrusion and not with per-building Three.js ExtrudeGeometry.","priority":"must","scope":["src/stage2/**"],"checks":["CHK-201"]},
+    {"id":"REQ-203","type":"behavior","statement":"The 2D map renders real Overture road and water geometry and open labels; 3D mode retains the same geographic layout.","priority":"must","scope":["src/stage2/main.js","src/config.js"],"checks":["CHK-201","CHK-202","CHK-203"]},
+    {"id":"REQ-204","type":"behavior","statement":"Overture buildings and Terrarium DEM are layered on the map for 3D buildings and terrain, and the production 3D browser proves buildings are visible.","priority":"must","scope":["src/stage2/main.js"],"checks":["CHK-201","CHK-202","CHK-204"]},
+    {"id":"REQ-205","type":"architecture","statement":"A MapLibre custom layer backed by Three.js loads project-owned reference reconstructions and remains extensible to licensed GLB assets.","priority":"must","scope":["src/stage2/landmarkLayer.js","src/stage2/referenceLandmarks.js","public/assets/landmarks/manifest.json"],"checks":["CHK-201","CHK-204"]},
+    {"id":"REQ-206","type":"behavior","statement":"At least twelve Foshan landmark targets are exposed; at least five ship as detailed reference reconstructions and unfinished targets remain explicitly planned.","priority":"must","scope":["src/stage2/landmarks.js","src/stage2/referenceLandmarks.js","public/assets/landmarks/manifest.json"],"checks":["CHK-201","CHK-204"]},
+    {"id":"REQ-207","type":"compatibility","statement":"The v1 Three.js application remains buildable and accessible at legacy.html.","priority":"must","scope":["legacy.html","vite.config.js","src/main.js"],"checks":["CHK-201","CHK-203"]},
+    {"id":"REQ-208","type":"reliability","statement":"MapLibre v6 uses a Vite-bundled worker so production vector sources cannot silently fail while raster still renders.","priority":"must","scope":["src/stage2/workerSetup.js","src/stage2/bootstrap.js"],"checks":["CHK-201","CHK-203"]},
+    {"id":"REQ-209","type":"quality","statement":"Each delivered reference landmark has automated triangle-count, physical-scale and draw-call batch regression evidence and an explicit reference-reconstruction fidelity label.","priority":"must","scope":["tests/landmarks.mjs","public/assets/landmarks/manifest.json"],"checks":["CHK-201"]}
+  ],
+  "checks": [
+    {"id":"CHK-201","kind":"command","description":"Static, legacy regression, Stage 2 architecture and landmark geometry checks pass.","command":"npm run check"},
+    {"id":"CHK-202","kind":"command","description":"Overture buildings/base/transportation, Terrarium and imagery are reachable and real Foshan road/water vectors decode.","command":"npm run network-smoke"},
+    {"id":"CHK-203","kind":"manual","description":"Production 2D Chrome smoke reaches appReady=true with MapLibre worker configured, real road features > 0, real water features > 0 and five landmark models loaded."},
+    {"id":"CHK-204","kind":"manual","description":"Production 3D Chrome smoke reaches mapMode=3d with Overture buildings visibly rendered and five landmark models loaded; screenshot evidence is retained."}
+  ]
 }
