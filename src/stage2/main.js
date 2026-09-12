@@ -1,6 +1,6 @@
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Protocol } from 'pmtiles';
+import { PMTiles, Protocol } from 'pmtiles';
 import {
   FOSHAN,
   OVERTURE_BASE_URL,
@@ -16,6 +16,9 @@ import './styles.css';
 const $ = selector => document.querySelector(selector);
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile);
+for (const url of [OVERTURE_BASE_URL, OVERTURE_TRANSPORTATION_URL, OVERTURE_BUILDINGS_URL]) {
+  protocol.add(new PMTiles(url));
+}
 
 const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const LANDMARK_MANIFEST = './assets/landmarks/manifest.json';
@@ -43,6 +46,7 @@ document.documentElement.dataset.mapEngine = 'maplibre';
 document.documentElement.dataset.mapMode = mode;
 document.documentElement.dataset.appVersion = '2.0.0-beta.2';
 document.documentElement.dataset.mapFacts = 'loading';
+document.documentElement.dataset.protocolArchives = '3';
 
 function setStatus(text, tone = '') {
   const node = $('#status');
