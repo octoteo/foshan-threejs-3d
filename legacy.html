@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#0b1117" />
+  <meta name="description" content="基于 Three.js 与开放地理数据构建的佛山高保真 3D 城市浏览器" />
+  <title>佛山真实 3D · Three.js Legacy</title>
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene" aria-label="佛山三维地图"></canvas>
+    <header class="topbar glass">
+      <div class="brand"><div class="brand-mark">FS</div><div><strong>佛山真实 3D</strong><span>Legacy · Three.js v1</span></div></div>
+      <div class="toolbar"><button id="homeBtn" class="btn">佛山全景</button><button id="sourceBtn" class="btn">数据源</button><button id="copyViewBtn" class="btn desktop-only">复制视角</button><button id="fullscreenBtn" class="btn icon" aria-label="全屏">⛶</button><button id="helpBtn" class="btn icon" aria-label="帮助">?</button><select id="qualitySelect" class="select" aria-label="画质"><option value="auto" selected>自动画质</option><option value="performance">性能</option><option value="balanced">均衡</option><option value="ultra">超清</option></select></div>
+    </header>
+    <aside class="landmark-panel glass"><div class="panel-title"><span>地标导航</span><small>真实坐标</small></div><div id="landmarkList" class="landmark-list"></div></aside>
+    <aside id="inspector" class="inspector glass hidden"><div class="source-head compact"><div><small>BUILDING INSPECTOR</small><h2 data-inspector-title>建筑</h2></div><button class="icon-btn" data-inspector-close aria-label="关闭">×</button></div><div data-inspector-body></div></aside>
+    <section id="sourcePanel" class="source-panel glass hidden" role="dialog" aria-modal="true" aria-label="数据源">
+      <div class="source-head"><div><small>OPEN DATA PIPELINE</small><h2>真实数据源</h2></div><button id="closeSourceBtn" class="icon-btn" aria-label="关闭">×</button></div>
+      <div class="source-grid"><div class="source-card primary"><div class="source-badge">建筑</div><strong>Overture Maps · Buildings PMTiles</strong><p>按视野 Range Request 读取真实 footprint / building_part；优先使用 height、num_floors、facade 与 roof 属性。</p><code id="overtureVersion">—</code></div><div class="source-card"><div class="source-badge">地形</div><strong>Mapzen Terrain Tiles · Terrarium</strong><p>公开高程瓦片构建真实地形。加载失败时会明确进入降级状态，不生成虚假高程。</p></div><div class="source-card"><div class="source-badge">高度增强</div><strong id="heightOverlayName">未启用</strong><p>支持将 3D-GloBFP/CNBH 等合法获取的数据预处理为局部高度瓦片；没有增强数据时继续使用 Overture 字段并标注估算。</p></div></div>
+      <div class="field"><label for="imagerySelect">卫星影像</label><select id="imagerySelect" class="select full"><option value="eox2016">EOX Sentinel-2 2016 · CC BY 4.0</option><option value="eox2024">EOX Sentinel-2 2024 · 非商业</option><option value="tianditu">天地图影像 · 需要 Key</option></select></div>
+      <div id="tiandituField" class="field hidden"><label for="tiandituKey">天地图开发 Key</label><input id="tiandituKey" class="input" type="password" autocomplete="off" placeholder="只保存在当前浏览器会话" /></div>
+      <div class="notice"><strong>真实性规则</strong><p>位置、轮廓与可用高度来自真实开放数据；缺失高度才使用确定性视觉估算。程序化立面、屋顶设备等属于视觉增强，不会被标注为实测事实。</p></div>
+      <div class="source-actions"><button id="applySourceBtn" class="btn accent">应用数据源</button></div>
+    </section>
+    <section id="helpPanel" class="help-panel glass hidden" role="dialog" aria-modal="true" aria-label="操作帮助"><div class="source-head compact"><div><small>CONTROLS</small><h2>操作帮助</h2></div><button id="closeHelpBtn" class="icon-btn">×</button></div><div class="help-grid"><div><kbd>左键拖动</kbd><span>旋转视角</span></div><div><kbd>右键拖动</kbd><span>平移地图</span></div><div><kbd>滚轮</kbd><span>缩放</span></div><div><kbd>单击建筑</kbd><span>查看数据来源</span></div><div><kbd>H</kbd><span>返回佛山全景</span></div><div><kbd>Esc</kbd><span>关闭弹窗</span></div></div></section>
+    <div class="time-control glass"><span>光照</span><input id="timeSlider" type="range" min="5" max="22" step="0.25" value="15" /><strong id="timeLabel">15:00</strong></div>
+    <div class="telemetry glass"><div><span>FPS</span><strong id="fps">--</strong></div><div><span>画质</span><strong id="qualityStats">--</strong></div><div><span>地形</span><strong id="terrainStats">--</strong></div><div><span>建筑</span><strong id="buildingStats">--</strong></div><div><span>数据高度</span><strong id="heightStats">--</strong></div><div><span>高度增强</span><strong id="overlayStats">--</strong></div><div><span>相机距离</span><strong id="altitudeStats">--</strong></div><div><span>坐标</span><strong id="coordStats">--</strong></div></div>
+    <div id="status" class="status glass">正在初始化开放数据…</div><div id="attribution" class="attribution glass"></div><div class="crosshair" aria-hidden="true"></div>
+  </div>
+  <script>document.documentElement.dataset.shellReady = "true";</script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

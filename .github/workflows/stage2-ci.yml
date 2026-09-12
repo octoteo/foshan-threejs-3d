@@ -1,0 +1,66 @@
+name: Stage2 CI
+on:
+  push:
+    branches: [stage2-digital-city-core]
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Refresh lockfile for Stage 2 dependency transition
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Persist lockfile once
+        run: |
+          if git diff --quiet package-lock.json; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore: lock stage2 map dependencies"
+          git push
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Static and regression checks
+        run: npm run check
+      - name: Production bundle
+        run: npm run build
+      - name: Verify live map/data endpoints
+        run: npm run network-smoke
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/foshan-stage2-server.log 2>&1 &
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 0.5
+          done
+          cat /tmp/foshan-stage2-server.log
+          exit 1
+      - name: Browser smoke Stage 2 map
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=35000 --window-size=1440,900 --screenshot=/tmp/foshan-stage2.png http://127.0.0.1:4173/ || true
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=38000 --window-size=1440,900 --dump-dom http://127.0.0.1:4173/ > /tmp/foshan-stage2-dom.html
+          grep -q 'data-shell-ready="true"' /tmp/foshan-stage2-dom.html
+          grep -q 'data-map-engine="maplibre"' /tmp/foshan-stage2-dom.html
+          grep -q 'data-building-source="ready"' /tmp/foshan-stage2-dom.html
+          grep -q 'data-app-ready="true"' /tmp/foshan-stage2-dom.html || { grep -o 'data-runtime-error="[^"]*"' /tmp/foshan-stage2-dom.html || true; exit 1; }
+          test -s /tmp/foshan-stage2.png
+          curl -fsS http://127.0.0.1:4173/legacy.html | grep -q 'Three.js Legacy'
+          echo "stage2-browser: PASS"
+      - name: Upload Stage 2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foshan-stage2-browser-evidence
+          path: |
+            /tmp/foshan-stage2.png
+            /tmp/foshan-stage2-dom.html
+            /tmp/foshan-stage2-server.log
+          if-no-files-found: ignore
+          retention-days: 14
