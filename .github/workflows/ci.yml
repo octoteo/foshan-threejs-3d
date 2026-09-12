@@ -8,67 +8,80 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install locked runtime/build dependencies
+      - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Static and algorithm checks
+      - name: Static, regression and landmark geometry checks
         run: npm run check
       - name: Production bundle
         run: npm run build
-      - name: Verify live Foshan open-data endpoints and geometry
+      - name: Verify live Foshan open-data endpoints and vectors
         run: npm run network-smoke
       - name: Start production preview
         run: |
-          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/foshan-server.log 2>&1 &
-          for i in {1..30}; do
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/foshan-stage2-server.log 2>&1 &
+          for i in {1..40}; do
             if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
             sleep 0.5
           done
-          cat /tmp/foshan-server.log
+          cat /tmp/foshan-stage2-server.log
           exit 1
-      - name: Browser smoke with bundled production app
+      - name: Browser acceptance 2D real map
         run: |
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -n "$CHROME"
-          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
-            --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
-            --virtual-time-budget=30000 --window-size=1440,900 \
-            --screenshot=/tmp/foshan-v1.png http://127.0.0.1:4173/ || true
-          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage \
-            --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader \
-            --virtual-time-budget=34000 --window-size=1440,900 \
-            --dump-dom http://127.0.0.1:4173/ > /tmp/foshan-dom.html
-          grep -q 'data-shell-ready="true"' /tmp/foshan-dom.html
-          grep -q 'data-app-ready="true"' /tmp/foshan-dom.html || {
-            grep -o 'data-runtime-error="[^"]*"' /tmp/foshan-dom.html || true
-            grep -o '<div id="status"[^>]*>[^<]*' /tmp/foshan-dom.html || true
-            exit 1
-          }
-          BUILDING_COUNT="$(grep -o '<strong id="buildingStats">[0-9,]* 栋' /tmp/foshan-dom.html | head -1 | sed -E 's/.*>([0-9,]+) 栋/\1/' | tr -d ',')"
-          test -n "$BUILDING_COUNT"
-          test "$BUILDING_COUNT" -gt 0
-          test -s /tmp/foshan-v1.png
-          echo "browser: appReady=true buildings=$BUILDING_COUNT PASS"
+          URL='http://127.0.0.1:4173/?diagnostics=1'
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=35000 --window-size=1440,900 --screenshot=/tmp/foshan-stage2-2d.png "$URL" || true
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=38000 --window-size=1440,900 --dump-dom "$URL" > /tmp/foshan-stage2-2d-dom.html
+          grep -q 'data-shell-ready="true"' /tmp/foshan-stage2-2d-dom.html
+          grep -q 'data-map-engine="maplibre"' /tmp/foshan-stage2-2d-dom.html
+          grep -q 'data-map-worker="configured"' /tmp/foshan-stage2-2d-dom.html
+          grep -q 'data-browser-diagnostics="pass"' /tmp/foshan-stage2-2d-dom.html
+          grep -Eq 'data-browser-range-transportation="(200|206):[1-9][0-9]*"' /tmp/foshan-stage2-2d-dom.html
+          grep -q 'data-map-facts="ready"' /tmp/foshan-stage2-2d-dom.html
+          grep -Eq 'data-road-features="[1-9][0-9]*"' /tmp/foshan-stage2-2d-dom.html
+          grep -Eq 'data-water-features="[1-9][0-9]*"' /tmp/foshan-stage2-2d-dom.html
+          grep -q 'data-landmark-models-loaded="5"' /tmp/foshan-stage2-2d-dom.html
+          grep -q 'data-app-ready="true"' /tmp/foshan-stage2-2d-dom.html || { grep -o 'data-runtime-error="[^"]*"' /tmp/foshan-stage2-2d-dom.html || true; exit 1; }
+          test -s /tmp/foshan-stage2-2d.png
+          curl -fsS http://127.0.0.1:4173/legacy.html | grep -q 'Three.js Legacy'
+          echo "browser-2d: PASS"
+      - name: Browser acceptance 3D city and detailed landmark layer
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          URL='http://127.0.0.1:4173/?diagnostics=1&mode=3d#16.2/22.969828/113.114296/24/60'
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=40000 --window-size=1440,900 --screenshot=/tmp/foshan-stage2-3d.png "$URL" || true
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=43000 --window-size=1440,900 --dump-dom "$URL" > /tmp/foshan-stage2-3d-dom.html
+          grep -q 'data-app-ready="true"' /tmp/foshan-stage2-3d-dom.html
+          grep -q 'data-map-mode="3d"' /tmp/foshan-stage2-3d-dom.html
+          grep -q 'data-building-source="ready"' /tmp/foshan-stage2-3d-dom.html
+          grep -q 'data-three-d-buildings="visible"' /tmp/foshan-stage2-3d-dom.html
+          grep -q 'data-landmark-models-loaded="5"' /tmp/foshan-stage2-3d-dom.html
+          grep -Eq 'data-road-features="[1-9][0-9]*"' /tmp/foshan-stage2-3d-dom.html
+          test -s /tmp/foshan-stage2-3d.png
+          echo "browser-3d: PASS"
       - name: Upload production bundle
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: foshan-v1-dist
+          name: foshan-stage2-dist
           path: dist
           retention-days: 14
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: foshan-v1-browser-evidence
+          name: foshan-stage2-browser-evidence
           path: |
-            /tmp/foshan-v1.png
-            /tmp/foshan-dom.html
-            /tmp/foshan-server.log
+            /tmp/foshan-stage2-2d.png
+            /tmp/foshan-stage2-2d-dom.html
+            /tmp/foshan-stage2-3d.png
+            /tmp/foshan-stage2-3d-dom.html
+            /tmp/foshan-stage2-server.log
           if-no-files-found: ignore
           retention-days: 14
