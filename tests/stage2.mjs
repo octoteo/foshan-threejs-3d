@@ -35,6 +35,7 @@ assert.match(config, /transportation\.pmtiles/);
 assert.match(config, /base\.pmtiles/);
 assert.match(layer, /GLTFLoader/);
 assert.match(layer, /MercatorCoordinate\.fromLngLat/);
-assert.ok((landmarks.match(/model:'planned'/g) || []).length >= 10);
+assert.ok((landmarks.match(/model:'reference-reconstruction'/g) || []).length >= 5, 'five detailed landmark reconstructions must ship');
+assert.ok((landmarks.match(/model:'planned'/g) || []).length >= 7, 'future landmark targets must remain explicitly planned');
 assert.doesNotMatch(app, /new THREE\.ExtrudeGeometry/);
 console.log('stage2: PASS');
