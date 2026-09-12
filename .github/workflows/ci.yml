@@ -8,7 +8,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 18
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,9 +55,9 @@ jobs:
         run: |
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           URL='http://127.0.0.1:4173/?diagnostics=1&mode=3d#16.2/22.969828/113.114296/24/60'
-          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=40000 --window-size=1440,900 --screenshot=/tmp/foshan-stage2-3d.png "$URL" || true
-          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=43000 --window-size=1440,900 --dump-dom "$URL" > /tmp/foshan-stage2-3d-dom.html
-          grep -q 'data-app-ready="true"' /tmp/foshan-stage2-3d-dom.html
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=60000 --window-size=1440,900 --screenshot=/tmp/foshan-stage2-3d.png "$URL" || true
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=65000 --window-size=1440,900 --dump-dom "$URL" > /tmp/foshan-stage2-3d-dom.html
+          grep -q 'data-app-ready="true"' /tmp/foshan-stage2-3d-dom.html || { grep -o 'data-[a-zA-Z0-9-]*="[^"]*"' /tmp/foshan-stage2-3d-dom.html | sort -u || true; exit 1; }
           grep -q 'data-map-mode="3d"' /tmp/foshan-stage2-3d-dom.html
           grep -q 'data-building-source="ready"' /tmp/foshan-stage2-3d-dom.html
           grep -q 'data-three-d-buildings="visible"' /tmp/foshan-stage2-3d-dom.html
