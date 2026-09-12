@@ -4,9 +4,12 @@ export const FOSHAN = Object.freeze({
   bounds: [112.55, 22.62, 113.39, 23.58]
 });
 
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '2.0.0-beta.2';
 export const OVERTURE_RELEASE = '2026-08-19.0';
-export const OVERTURE_BUILDINGS_URL = `https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/${OVERTURE_RELEASE}/buildings.pmtiles`;
+const OVERTURE_TILE_ROOT = `https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/${OVERTURE_RELEASE}`;
+export const OVERTURE_BUILDINGS_URL = `${OVERTURE_TILE_ROOT}/buildings.pmtiles`;
+export const OVERTURE_BASE_URL = `${OVERTURE_TILE_ROOT}/base.pmtiles`;
+export const OVERTURE_TRANSPORTATION_URL = `${OVERTURE_TILE_ROOT}/transportation.pmtiles`;
 export const TERRARIUM_TEMPLATE = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
 export const HEIGHT_OVERLAY_MANIFEST = './data/heights/manifest.json';
 export const LANDMARK_MODEL_MANIFEST = './assets/landmarks/manifest.json';
