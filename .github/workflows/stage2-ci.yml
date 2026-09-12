@@ -44,10 +44,15 @@ jobs:
         run: |
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -n "$CHROME"
-          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=35000 --window-size=1440,900 --screenshot=/tmp/foshan-stage2.png http://127.0.0.1:4173/ || true
-          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=38000 --window-size=1440,900 --dump-dom http://127.0.0.1:4173/ > /tmp/foshan-stage2-dom.html
+          URL='http://127.0.0.1:4173/?diagnostics=1'
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=35000 --window-size=1440,900 --screenshot=/tmp/foshan-stage2.png "$URL" || true
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --virtual-time-budget=38000 --window-size=1440,900 --dump-dom "$URL" > /tmp/foshan-stage2-dom.html
+          echo '--- Stage 2 runtime attributes ---'
+          grep -o 'data-[a-zA-Z0-9-]*="[^"]*"' /tmp/foshan-stage2-dom.html | sort -u || true
           grep -q 'data-shell-ready="true"' /tmp/foshan-stage2-dom.html
           grep -q 'data-map-engine="maplibre"' /tmp/foshan-stage2-dom.html
+          grep -q 'data-browser-diagnostics="pass"' /tmp/foshan-stage2-dom.html
+          grep -Eq 'data-browser-range-transportation="(200|206):[1-9][0-9]*"' /tmp/foshan-stage2-dom.html
           grep -q 'data-building-source="ready"' /tmp/foshan-stage2-dom.html
           grep -q 'data-app-ready="true"' /tmp/foshan-stage2-dom.html || { grep -o 'data-runtime-error="[^"]*"' /tmp/foshan-stage2-dom.html || true; exit 1; }
           test -s /tmp/foshan-stage2.png
