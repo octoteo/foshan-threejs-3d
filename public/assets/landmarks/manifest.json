@@ -1,5 +1,76 @@
 {
-  "version": 1,
-  "license": "No bundled third-party landmark meshes. Add only models with verified redistribution rights.",
-  "models": []
+  "version": 2,
+  "policy": "Project-owned reference reconstructions built from public factual dimensions and visual study. They are not surveyed or photogrammetric assets and use no third-party textures.",
+  "models": [
+    {
+      "id": "century-lotus",
+      "name": "世纪莲体育场",
+      "generator": "centuryLotus",
+      "lon": 113.114296,
+      "lat": 22.969828,
+      "altitude": 0,
+      "scale": 1,
+      "rotateX": 90,
+      "rotateZ": 0,
+      "fidelity": "reference-reconstruction",
+      "documentedDimensions": "屋盖直径约310m；高度约50m；40片莲花膜瓣",
+      "reference": "Wikidata Q1072722 / public architecture references"
+    },
+    {
+      "id": "lingnan-pearl",
+      "name": "岭南明珠体育馆",
+      "generator": "lingnanPearl",
+      "lon": 113.12185,
+      "lat": 23.01688,
+      "altitude": 0,
+      "scale": 1,
+      "rotateX": 90,
+      "rotateZ": 0,
+      "fidelity": "reference-reconstruction",
+      "documentedDimensions": "主馆直径约128.4m、高约35.48m；副馆直径约78.4m、高约26.4m",
+      "reference": "OpenStreetMap/Wikidata location + public structural references"
+    },
+    {
+      "id": "shunfeng-gate",
+      "name": "顺峰山公园牌坊",
+      "generator": "shunfengGate",
+      "lon": 113.27188,
+      "lat": 22.82782,
+      "altitude": 0,
+      "scale": 1,
+      "rotateX": 90,
+      "rotateZ": 0,
+      "fidelity": "reference-reconstruction",
+      "documentedDimensions": "宽约88m；总高约38m；主跨约35m；三跨式牌坊",
+      "reference": "OpenStreetMap location + published dimensional references"
+    },
+    {
+      "id": "nanfeng-kiln",
+      "name": "南风古灶",
+      "generator": "nanfengKiln",
+      "lon": 113.07383,
+      "lat": 23.00753,
+      "altitude": 0,
+      "scale": 1,
+      "rotateX": 90,
+      "rotateZ": 18,
+      "fidelity": "reference-reconstruction",
+      "documentedDimensions": "龙窑长度按公开34.4m资料重建；烟囱与配套院落为视觉参考重建",
+      "reference": "OpenStreetMap location + public heritage references"
+    },
+    {
+      "id": "foshan-grand-theatre",
+      "name": "佛山大剧院",
+      "generator": "foshanGrandTheatre",
+      "lon": 113.109769,
+      "lat": 22.971637,
+      "altitude": 0,
+      "scale": 1,
+      "rotateX": 90,
+      "rotateZ": 0,
+      "fidelity": "reference-reconstruction",
+      "documentedDimensions": "建筑面积约23264.69㎡；最高结构约33.6m；九个方盒叠合形态",
+      "reference": "Guangdong public cultural information + public map coordinate transformed to WGS84"
+    }
+  ]
 }
